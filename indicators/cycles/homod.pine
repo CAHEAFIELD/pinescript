@@ -25,7 +25,11 @@ atan2(series float y,series float x)=>
 
 //@function Measures dominant cycle period using Ehlers homodyne discriminator
 //@doc https://github.com/mihakralj/pinescript/blob/main/indicators/cycles/homod.md
-//@patterns §2, §6, §7, §16, §17, §18, §19
+//@param source Price input series
+//@param minPeriod Minimum dominant cycle length
+//@param maxPeriod Maximum dominant cycle length
+//@returns Smoothed dominant cycle estimate
+//@optimized Exponential warmup compensation for dominant cycle smoothing
 //@validation wolfram:"atan2(y,x)" external:"TradingView Homodyne Discriminator","Forex-Station Homodyne Discriminator","MQL5 Adaptive Lookback Homodyne","tindicators hd.cc"
 homod(series float source,simple float minPeriod,simple float maxPeriod)=>
     if minPeriod<=0

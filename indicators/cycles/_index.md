@@ -12,7 +12,7 @@
 | [SINE](/indicators/cycles/sine.md) | Ehlers Sine Wave | Original cycle indicator plotting sine and lead-sine waves based on an assumed dominant cycle period |
 | [SOLAR](/indicators/cycles/solar.md) | Solar Cycle | High-precision seasonal cycle based on solar position using astronomical formulas |
 | [STC](/indicators/cycles/stc.md) | Schaff Trend Cycle | Measures cycles and trends using a combination of Macd and stochastic calculations |
-| EACP | Ehlers Autocorrelation Periodogram | Ehlers indicator using autocorrelation to estimate the dominant cycle period |
+| [EACP](/indicators/cycles/eacp.md) | Ehlers Autocorrelation Periodogram | Uses autocorrelation periodogram with roofing filter to estimate dominant cycle period |
 | HOMOD | Homodyne Discriminator | Ehlers indicator designed to measure the instantaneous frequency of market cycles |
 | [HT_DCPERIOD](/indicators/cycles/ht_dcperiod.md) | Hilbert Transform - Dominant Cycle Period | Uses Hilbert Transform to measure the dominant cycle period in price data |
 | [HT_DCPHASE](/indicators/cycles/ht_dcphase.md) | Hilbert Transform - Dominant Cycle Phase | Uses Hilbert Transform to measure the phase angle of the dominant cycle (-π to π radians) |

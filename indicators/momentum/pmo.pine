@@ -33,7 +33,9 @@ i_signal_len = input.int(10, "Signal Line Length", minval=1)
 
 // Calculation
 pmo_value = pmo(i_source, i_roc_len, i_smooth1_len, i_smooth2_len)
-signal_line = ta.ema(pmo_value, i_signal_len)
+float alpha_signal = 2.0 / (i_signal_len + 1)
+var float signal_line = na
+signal_line := na(signal_line) ? pmo_value : signal_line * (1.0 - alpha_signal) + pmo_value * alpha_signal
 
 // Plot
 plot(pmo_value, "PMO", color=color.blue, linewidth=2)

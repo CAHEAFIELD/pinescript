@@ -2,7 +2,6 @@
 
 | Indicator | Name | Description |
 | ------------ | ---------------------------------------- | ---------------------------------------- |
-| [AFIRMA](/indicators/trends_FIR/afirma.md) | Adaptive Finite Impulse Response MA | Adaptively adjusts filter response characteristics based on input data dynamics for optimal smoothing. |
 | [ALMA](/indicators/trends_FIR/alma.md) | Arnaud Legoux MA | Applies Gaussian distribution weights to price data with configurable offset and sigma parameters to reduce lag while maintaining noise filtering. |
 | [BLMA](/indicators/trends_FIR/blma.md) | Blackman Window MA | Implements Blackman window function for superior frequency response with minimized side-lobes in spectral domain. |
 | [CONV](/indicators/trends_FIR/conv.md) | Convolution MA with any kernel | Provides generalized convolution framework supporting arbitrary kernel functions for customizable filtering characteristics. |

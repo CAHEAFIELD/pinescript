@@ -11,7 +11,7 @@
 | [ADR](/indicators/volatility/adr.md) | Average Daily Range | Volatility |
 | [ADX](/indicators/dynamics/adx.md) | Average Directional Movement Index | Dynamics |
 | [ADXR](/indicators/dynamics/adxr.md) | Average Directional Movement Rating | Dynamics |
-| [AFIRMA](/indicators/trends_FIR/afirma.md) | Adaptive Finite Impulse Response MA | Trends (FIR) |
+| [AFIRMA](/indicators/forecasts/afirma.md) | Autoregressive FIR MA | Forecasts |
 | [ALLIGATOR](/indicators/dynamics/alligator.md) | Williams Alligator | Dynamics |
 | [ALMA](/indicators/trends_FIR/alma.md) | Arnaud Legoux MA | Trends (FIR) |
 | [AMAT](/indicators/dynamics/amat.md) | Archer Moving Averages Trends | Dynamics |
@@ -66,6 +66,7 @@
 | [DSMA](/indicators/trends_IIR/dsma.md) | Deviation-Scaled MA | Trends (IIR) |
 | [DWMA](/indicators/trends_FIR/dwma.md) | Double Weighted MA | Trends (FIR) |
 | [EBSW](/indicators/cycles/ebsw.md) | Ehlers Even Better Sinewave | Cycles |
+| [EACP](/indicators/cycles/eacp.md) | Ehlers Autocorrelation Periodogram | Cycles |
 | [EWMA](/indicators/volatility/ewma.md) | Exponential Weighted MA Volatility | Volatility |
 | [EFI](/indicators/volume/efi.md) | Elder's Force Index | Volume |
 | [ELLIPTIC](/indicators/filters/elliptic.md) | Elliptic (Cauer) Filter | Filters |

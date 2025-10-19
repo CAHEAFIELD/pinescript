@@ -1,5 +1,7 @@
+* [Forecasts](/indicators/forecasts/_index.md)
+  * [AFIRMA: Autoregressive FIR MA](/indicators/forecasts/afirma.md)
+
 * [Trends - FIR](/indicators/trends_FIR/_index.md)
-  * [AFIRMA: Adaptive Finite Impulse Response MA](/indicators/trends_FIR/afirma.md)
   * [ALMA: Arnaud Legoux MA](/indicators/trends_FIR/alma.md)
   * [BLMA: Blackman Window MA](/indicators/trends_FIR/blma.md)
   * [BWMA: Bessel-Weighted MA](/indicators/trends_FIR/bwma.md)
