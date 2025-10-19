@@ -20,7 +20,7 @@
 | [FISHER](/indicators/oscillators/fisher.md) | Fisher Transform | Converts price data into a Gaussian normal distribution to identify price reversals |
 | FOSC | Forecast Oscillator | Plots the percentage difference between a forecast price (e.g., linear regression) and the actual price |
 | [INERTIA](/indicators/oscillators/inertia.md) | Inertia | Measures trend strength based on the distance of the current price from a linear regression line |
-| KDJ | KDJ Indicator | Stochastic-like oscillator showing location of close relative to high-low range (%K, %D, %J lines) |
+| [KDJ](/indicators/oscillators/kdj.md) | KDJ Indicator | Enhanced Stochastic with K, D, and J lines; J = 3K - 2D provides leading momentum signals |
 | KRI | Kairi Relative Index | Measures the deviation of the current price from its simple moving average |
 | KST | KST Oscillator | Smoothed, weighted Rate-of-Change oscillator combining multiple timeframes |
 | PGO | Pretty Good Oscillator | Measures distance of current close from its N-period simple moving average |
