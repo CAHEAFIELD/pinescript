@@ -17,7 +17,7 @@
 | [DPO](/indicators/oscillators/dpo.md) | Detrended Price Oscillator | Removes trend from price by comparing to a displaced SMA, highlighting cyclical patterns |
 | ER | Efficiency Ratio | Measures price efficiency by comparing net price movement to total price movement (KAMA component) |
 | ERI | Elder Ray Index | Measures buying (Bull Power) and selling (Bear Power) pressure relative to an EMA |
-| FISHER | Fisher Transform | Converts price data into a Gaussian normal distribution to identify price reversals |
+| [FISHER](/indicators/oscillators/fisher.md) | Fisher Transform | Converts price data into a Gaussian normal distribution to identify price reversals |
 | FOSC | Forecast Oscillator | Plots the percentage difference between a forecast price (e.g., linear regression) and the actual price |
 | [INERTIA](/indicators/oscillators/inertia.md) | Inertia | Measures trend strength based on the distance of the current price from a linear regression line |
 | KDJ | KDJ Indicator | Stochastic-like oscillator showing location of close relative to high-low range (%K, %D, %J lines) |

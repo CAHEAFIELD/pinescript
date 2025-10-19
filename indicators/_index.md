@@ -76,6 +76,7 @@
 | [EPMA](/indicators/trends_FIR/epma.md) | Endpoint MA | Trends (FIR) |
 | [EXP](/indicators/numerics/exp.md) | Exponential Transformation | Numerics |
 | [FCB](/indicators/channels/fcb.md) | Fractal Chaos Bands | Channels |
+| [FISHER](/indicators/oscillators/fisher.md) | Fisher Transform | Oscillators |
 | [FRACTALS](/indicators/reversals/fractals.md) | Williams Fractals | Reversals |
 | [FRAMA](/indicators/trends_IIR/frama.md) | Fractal Adaptive MA | Trends (IIR) |
 | [GAUSS](/indicators/filters/gauss.md) | Gaussian Filter | Filters |

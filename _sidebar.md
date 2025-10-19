@@ -191,6 +191,7 @@
   * [BOP: Balance of Power](/indicators/oscillators/bop.md)
   * [CCI: Commodity Channel Index](/indicators/oscillators/cci.md)
   * [DPO: Detrended Price Oscillator](/indicators/oscillators/dpo.md)
+  * [FISHER: Fisher Transform](/indicators/oscillators/fisher.md)
   * [INERTIA: Inertia](/indicators/oscillators/inertia.md)
   * [SMI: Stochastic Momentum Index](/indicators/oscillators/smi.md)
   * [STOCH: Stochastic Oscillator](/indicators/oscillators/stoch.md)
