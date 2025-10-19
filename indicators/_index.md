@@ -27,6 +27,7 @@
 | [ATRN](/indicators/volatility/atrn.md) | Average True Range Normalized [0,1] | Volatility |
 | [ATRP](/indicators/volatility/atrp.md) | Average True Range Percent | Volatility |
 | [BBANDS](/indicators/channels/bbands.md) | Bollinger Bands | Channels |
+| [BBB](/indicators/oscillators/bbb.md) | Bollinger %B | Oscillators |
 | [BBW](/indicators/volatility/bbw.md) | Bollinger Band Width | Volatility |
 | [BBWN](/indicators/volatility/bbwn.md) | Bollinger Band Width Normalized | Volatility |
 | [BBWP](/indicators/volatility/bbwp.md) | Bollinger Band Width Percentile | Volatility |
