@@ -278,3 +278,4 @@
 | [ZLEMA](/indicators/trends_IIR/zlema.md) | Zero-Lag Exponential MA | Trends (IIR) |
 | [ZLTEMA](/indicators/trends_IIR/zltema.md) | Zero-Lag Triple Exponential MA | Trends (IIR) |
 | [ZSCORE](/indicators/statistics/zscore.md) | Z-score standardization | Statistics |
+| [ZTEST](/indicators/statistics/ztest.md) | Z-Test | Statistics |
