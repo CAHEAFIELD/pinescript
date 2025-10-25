@@ -169,6 +169,7 @@
 | [OHLC4](/indicators/numerics/ohlc4.md) | (Open + High + Low + Close) / 4 | Numerics |
 | [PCHANNEL](/indicators/channels/pchannel.md) | Price Channel | Channels |
 | [PERCENTILE](/indicators/statistics/percentile.md) | Percentile | Statistics |
+| [PGO](/indicators/oscillators/pgo.md) | Pretty Good Oscillator | Oscillators |
 | [PHASOR](/indicators/cycles/phasor.md) | Ehlers Phasor Analysis | Cycles |
 | [PIVOT](/indicators/reversals/pivot.md) | Pivot Points (Classic) | Reversals |
 | [PIVOTCAM](/indicators/reversals/pivotcam.md) | Camarilla Pivot Points | Reversals |

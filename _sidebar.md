@@ -196,6 +196,7 @@
   * [FISHER: Fisher Transform](/indicators/oscillators/fisher.md)
   * [INERTIA: Inertia](/indicators/oscillators/inertia.md)
   * [KDJ: KDJ Indicator](/indicators/oscillators/kdj.md)
+  * [PGO: Pretty Good Oscillator](/indicators/oscillators/pgo.md)
   * [SMI: Stochastic Momentum Index](/indicators/oscillators/smi.md)
   * [STOCH: Stochastic Oscillator](/indicators/oscillators/stoch.md)
   * [STOCHF: Stochastic Fast](/indicators/oscillators/stochf.md)

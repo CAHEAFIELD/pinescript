@@ -24,7 +24,7 @@
 | [KDJ](/indicators/oscillators/kdj.md) | KDJ Indicator | Enhanced Stochastic with K, D, and J lines; J = 3K - 2D provides leading momentum signals |
 | KRI | Kairi Relative Index | Measures the deviation of the current price from its simple moving average |
 | KST | KST Oscillator | Smoothed, weighted Rate-of-Change oscillator combining multiple timeframes |
-| PGO | Pretty Good Oscillator | Measures distance of current close from its N-period simple moving average |
+| [PGO](/indicators/oscillators/pgo.md) | Pretty Good Oscillator | Measures distance of current close from its N-period SMA, normalized by ATR |
 | PSL | Psychological Line | Measures percentage of days closing up over a specified period, gauges sentiment |
 | QQE | Quantitative Qualitative Estimation | Smoothing technique applied to RSI, providing trade signals via signal line crossovers |
 | RVGI | Relative Vigor Index | (Often synonymous with RVI) Compares closing price to trading range |
