@@ -17,4 +17,5 @@
 | [TTM](/indicators/dynamics/ttm.md) | TTM Trend | Fast 6-period EMA with color-coded trend; green = bullish, red = bearish; part of John Carter's TTM system |
 | [AMAT](/indicators/dynamics/amat.md) | Archer Moving Averages Trends | Trend identification using multiple EMAs; requires alignment of fast/slow EMAs and directional movement |
 | [HT_TRENDMODE](/indicators/dynamics/ht_trendmode.md) | Hilbert Transform - Trend vs Cycle Mode | Uses Hilbert Transform to determine if the market is in a trending or cycling phase |
+| [ICHIMOKU](/indicators/dynamics/ichimoku.md) | Ichimoku Cloud | Comprehensive system with 5 components (Tenkan, Kijun, Senkou A/B, Chikou); cloud shows support/resistance zones |
 | IMPULSE | Elder Impulse System | Combines EMA and MACD histogram; color-coded system (green=bullish, red=bearish, blue=neutral) |

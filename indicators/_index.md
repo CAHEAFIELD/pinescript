@@ -40,10 +40,10 @@
 | [BPF](/indicators/filters/bpf.md) | Ehlers Bandpass Filter | Filters |
 | [BUTTER](/indicators/filters/butter.md) | Butterworth Filter | Filters |
 | [BWMA](/indicators/trends_FIR/bwma.md) | Bessel-Weighted MA | Trends (FIR) |
+| [CCI](/indicators/momentum/cci.md) | Commodity Channel Index | Momentum |
 | [CCV](/indicators/volatility/ccv.md) | Close-to-Close Volatility | Volatility |
 | [CFB](/indicators/cycles/cfb.md) | Composite Fractal Behavior | Cycles |
 | [CG](/indicators/cycles/cg.md) | Center of Gravity | Cycles |
-| [CCI](/indicators/momentum/cci.md) | Commodity Channel Index | Momentum |
 | [CHANGE](/indicators/numerics/change.md) | Percentage Change | Numerics |
 | [CHEBY1](/indicators/filters/cheby1.md) | Chebyshev Type I Filter | Filters |
 | [CHEBY2](/indicators/filters/cheby2.md) | Chebyshev Type II Filter | Filters |
@@ -66,47 +66,53 @@
 | [DSP](/indicators/cycles/dsp.md) | Detrended Synthetic Price | Cycles |
 | [DSMA](/indicators/trends_IIR/dsma.md) | Deviation-Scaled MA | Trends (IIR) |
 | [DWMA](/indicators/trends_FIR/dwma.md) | Double Weighted MA | Trends (FIR) |
-| [EBSW](/indicators/cycles/ebsw.md) | Ehlers Even Better Sinewave | Cycles |
+| [DX](/indicators/dynamics/dx.md) | Directional Movement Index | Dynamics |
 | [EACP](/indicators/cycles/eacp.md) | Ehlers Autocorrelation Periodogram | Cycles |
-| [EWMA](/indicators/volatility/ewma.md) | Exponential Weighted MA Volatility | Volatility |
+| [EBSW](/indicators/cycles/ebsw.md) | Ehlers Even Better Sinewave | Cycles |
 | [EFI](/indicators/volume/efi.md) | Elder's Force Index | Volume |
 | [ELLIPTIC](/indicators/filters/elliptic.md) | Elliptic (Cauer) Filter | Filters |
 | [EMA](/indicators/trends_IIR/ema.md) | Exponential MA | Trends (IIR) |
 | [ENTROPY](/indicators/statistics/entropy.md) | Normalized Shannon Entropy | Statistics |
 | [EOM](/indicators/volume/eom.md) | Ease of Movement | Volume |
 | [EPMA](/indicators/trends_FIR/epma.md) | Endpoint MA | Trends (FIR) |
+| [EWMA](/indicators/volatility/ewma.md) | Exponential Weighted MA Volatility | Volatility |
 | [EXP](/indicators/numerics/exp.md) | Exponential Transformation | Numerics |
 | [FCB](/indicators/channels/fcb.md) | Fractal Chaos Bands | Channels |
 | [FISHER](/indicators/oscillators/fisher.md) | Fisher Transform | Oscillators |
 | [FRACTALS](/indicators/reversals/fractals.md) | Williams Fractals | Reversals |
 | [FRAMA](/indicators/trends_IIR/frama.md) | Fractal Adaptive MA | Trends (IIR) |
 | [GAUSS](/indicators/filters/gauss.md) | Gaussian Filter | Filters |
-| [HANN](/indicators/filters/hann.md) | Hann FIR Filter | Filters |
-| [HPF](/indicators/filters/hpf.md) | Ehlers Highpass Filter | Filters |
 | [GEOMEAN](/indicators/statistics/geomean.md) | Geometric Mean | Statistics |
 | [GKV](/indicators/volatility/gkv.md) | Garman-Klass Volatility | Volatility |
 | [GRANGER](/indicators/statistics/granger.md) | Granger Causality Test | Statistics |
 | [GWMA](/indicators/trends_FIR/gwma.md) | Gaussian-Weighted MA | Trends (FIR) |
 | [HAMMA](/indicators/trends_FIR/hamma.md) | Hamming Window MA | Trends (FIR) |
 | [HANMA](/indicators/trends_FIR/hanma.md) | Hanning Window MA | Trends (FIR) |
+| [HANN](/indicators/filters/hann.md) | Hann FIR Filter | Filters |
 | [HARMEAN](/indicators/statistics/harmean.md)| Harmonic Mean | Statistics |
 | [HEMA](/indicators/trends_IIR/hema.md) | Hull Exponential MA | Trends (IIR) |
 | [HIGHEST](/indicators/numerics/highest.md) | Highest value | Numerics |
+| [HL2](/indicators/numerics/hl2.md) | (High + Low) / 2 | Numerics |
+| [HLC3](/indicators/numerics/hlc3.md) | (High + Low + Close) / 3 | Numerics |
+| [HLCC4](/indicators/numerics/hlcc4.md) | (High + Low + Close + Close) / 4 | Numerics |
 | [HLV](/indicators/volatility/hlv.md) | High-Low Volatility | Volatility |
 | [HMA](/indicators/trends_FIR/hma.md) | Hull MA | Trends (FIR) |
 | [HOMOD](/indicators/cycles/homod.md) | Homodyne Discriminator Dominant Cycle | Cycles |
+| [HP](/indicators/filters/hp.md) | Hodrick-Prescott Filter | Filters |
+| [HPF](/indicators/filters/hpf.md) | Ehlers Highpass Filter | Filters |
 | [HT_DCPERIOD](/indicators/cycles/ht_dcperiod.md) | Hilbert Transform Dominant Cycle Period | Cycles |
 | [HT_DCPHASE](/indicators/cycles/ht_dcphase.md) | Hilbert Transform Dominant Cycle Phase | Cycles |
 | [HT_PHASOR](/indicators/cycles/ht_phasor.md) | Hilbert Transform Phasor Components | Cycles |
 | [HT_SINE](/indicators/cycles/ht_sine.md) | Hilbert Transform SineWave | Cycles |
 | [HT_TRENDMODE](/indicators/dynamics/ht_trendmode.md) | Hilbert Transform Trend Mode | Dynamics |
-| [HP](/indicators/filters/hp.md) | Hodrick-Prescott Filter | Filters |
 | [HTIT](/indicators/trends_IIR/htit.md) | Hilbert Transform Instantaneous Trend | Trends (IIR) |
 | [HUBER](/indicators/errors/huber.md) | Huber Loss | Errors |
 | [HURST](/indicators/statistics/hurst.md) | Hurst | Statistics |
 | [HV](/indicators/volatility/hv.md) | Historical Volatility | Volatility |
 | [HWMA](/indicators/trends_FIR/hwma.md) | Holt Weighted MA | Trends (FIR) |
+| [ICHIMOKU](/indicators/dynamics/ichimoku.md) | Ichimoku Cloud | Dynamics |
 | [III](/indicators/volume/iii.md) | Intraday Intensity Index | Volume |
+| [IMI](/indicators/dynamics/imi.md) | Intraday Momentum Index | Dynamics |
 | [INERTIA](/indicators/oscillators/inertia.md) | Inertia | Oscillators |
 | [IQR](/indicators/statistics/iqr.md) | Interquartile Range | Statistics |
 | [JB](/indicators/statistics/jb.md) | Jarque-Bera Test | Statistics |
@@ -116,7 +122,6 @@
 | [JVOLTY](/indicators/volatility/jvolty.md) | Jurik Volatility | Volatility |
 | [JVOLTYN](/indicators/volatility/jvoltyn.md) | Jurik Volatility Normalized [0,1] | Volatility |
 | [KAMA](/indicators/trends_IIR/kama.md) | Kaufman Adaptive MA | Trends (IIR) |
-| [MASSI](/indicators/volatility/massi.md) | Mass Index | Volatility |
 | [KCHANNEL](/indicators/channels/kchannel.md) | Keltner Channel | Channels |
 | [KDJ](/indicators/oscillators/kdj.md) | KDJ Indicator | Oscillators |
 | [KENDALL](/indicators/statistics/kendall.md) | Kendall Rank Correlation | Statistics |
@@ -138,13 +143,14 @@
 | [MAPD](/indicators/errors/mapd.md) | Mean Absolute Percentage Difference | Errors |
 | [MAPE](/indicators/errors/mape.md) | Mean Absolute Percentage Error | Errors |
 | [MASE](/indicators/errors/mase.md) | Mean Absolute Scaled Error | Errors |
+| [MASSI](/indicators/volatility/massi.md) | Mass Index | Volatility |
 | [ME](/indicators/errors/me.md) | Mean Error | Errors |
-| [MEDFILT](/indicators/filters/median.md) | Median Filter | Numerics/Filters |
 | [MEDIAN](/indicators/statistics/median.md) | Median (Statistical) | Statistics |
 | [MFI](/indicators/volume/mfi.md) | Money Flow Index | Volume |
 | [MGDI](/indicators/trends_IIR/mgdi.md) | McGinley Dynamic Indicator | Trends (IIR) |
-| [MMCHANNEL](/indicators/channels/mmchannel.md) | Min-Max Channel | Channels |
+| [MIDPOINT](/indicators/numerics/midpoint.md) | (Highest + Lowest) / 2 | Numerics |
 | [MMA](/indicators/trends_IIR/mma.md) | Modified MA | Trends (IIR) |
+| [MMCHANNEL](/indicators/channels/mmchannel.md) | Min-Max Channel | Channels |
 | [MODE](/indicators/statistics/mode.md) | Mode (Most Frequent) | Statistics |
 | [MOM](/indicators/momentum/mom.md) | Momentum | Momentum |
 | [MOON](/indicators/cycles/moon.md) | Moon Phase | Cycles |
@@ -155,9 +161,12 @@
 | [NOTCH](/indicators/filters/notch.md) | Notch Filter | Filters |
 | [NVI](/indicators/volume/nvi.md) | Negative Volume Index | Volume |
 | [OBV](/indicators/volume/obv.md) | On Balance Volume | Volume |
+| [OC2](/indicators/numerics/oc2.md) | (Open + Close) / 2 | Numerics |
+| [OHL3](/indicators/numerics/ohl3.md) | (Open + High + Low) / 3 | Numerics |
+| [OHLC4](/indicators/numerics/ohlc4.md) | (Open + High + Low + Close) / 4 | Numerics |
+| [PCHANNEL](/indicators/channels/pchannel.md) | Price Channel | Channels |
 | [PERCENTILE](/indicators/statistics/percentile.md) | Percentile | Statistics |
 | [PHASOR](/indicators/cycles/phasor.md) | Ehlers Phasor Analysis | Cycles |
-| [PCHANNEL](/indicators/channels/pchannel.md) | Price Channel | Channels |
 | [PIVOT](/indicators/reversals/pivot.md) | Pivot Points (Classic) | Reversals |
 | [PIVOTCAM](/indicators/reversals/pivotcam.md) | Camarilla Pivot Points | Reversals |
 | [PIVOTDEM](/indicators/reversals/pivotdem.md) | DeMark Pivot Points | Reversals |
@@ -169,7 +178,6 @@
 | [PRS](/indicators/momentum/prs.md) | Price Relative Strength | Momentum |
 | [PSAR](/indicators/reversals/psar.md) | Parabolic Stop And Reverse | Reversals |
 | [PV](/indicators/volatility/pv.md) | Parkinson Volatility | Volatility |
-| [SWINGS](/indicators/reversals/swings.md) | Swing High/Low Detection | Reversals |
 | [PVD](/indicators/volume/pvd.md) | Price Volume Divergence | Volume |
 | [PVI](/indicators/volume/pvi.md) | Positive Volume Index | Volume |
 | [PVO](/indicators/volume/pvo.md) | Percentage Volume Oscillator | Volume |
@@ -194,25 +202,25 @@
 | [RSI](/indicators/momentum/rsi.md) | Relative Strength Index | Momentum |
 | [RSQUARED](/indicators/errors/rsquared.md) | R-Squared | Errors |
 | [RSV](/indicators/volatility/rsv.md) | Rogers-Satchell Volatility | Volatility |
+| [RSX](/indicators/momentum/rsx.md) | Jurik Relative Strength Quality Index | Momentum |
 | [RV](/indicators/volatility/rv.md) | Realized Volatility | Volatility |
 | [RVI](/indicators/volatility/rvi.md) | Relative Volatility Index | Volatility |
-| [RSX](/indicators/momentum/rsx.md) | Jurik Relative Strength Quality Index | Momentum |
 | [SDCHANNEL](/indicators/channels/sdchannel.md) | Standard Deviation Channel | Channels |
 | [SGF](/indicators/filters/sgf.md) | Savitzky-Golay Filter | Filters |
 | [SGMA](/indicators/trends_FIR/sgma.md) | Savitzky-Golay MA | Trends (FIR) |
 | [SIGMOID](/indicators/numerics/sigmoid.md) | Logistic Function | Numerics |
 | [SINE](/indicators/cycles/sine.md) | Sine Wave | Cycles |
 | [SINEMA](/indicators/trends_FIR/sinema.md) | Sine-weighted MA | Trends (FIR) |
-| [SOLAR](/indicators/cycles/solar.md) | Solar Activity Cycle | Cycles |
-| [SSF](/indicators/filters/ssf.md) | Ehlers Super Smooth Filter | Filters |
-| [SSF-DSP](/indicators/cycles/ssfdsp.md) | SSF-Based Detrended Synthetic Price | Cycles |
 | [SKEW](/indicators/statistics/skew.md) | Skewness | Statistics |
 | [SLOPE](/indicators/numerics/slope.md) | Rate of change; 1st derivative | Numerics |
 | [SMA](/indicators/trends_FIR/sma.md) | Simple MA | Trends (FIR) |
 | [SMAPE](/indicators/errors/smape.md) | Symmetric Mean Absolute Percentage Error | Errors |
 | [SMI](/indicators/oscillators/smi.md) | Stochastic Momentum Index | Oscillators |
+| [SOLAR](/indicators/cycles/solar.md) | Solar Activity Cycle | Cycles |
 | [SPEARMAN](/indicators/statistics/spearman.md) | Spearman Rank Correlation | Statistics |
 | [SQRT](/indicators/numerics/sqrt.md) | Square Root Transformation | Numerics |
+| [SSF](/indicators/filters/ssf.md) | Ehlers Super Smooth Filter | Filters |
+| [SSFDSP](/indicators/cycles/ssfdsp.md) | SSF-Based Detrended Synthetic Price | Cycles |
 | [STANDARDIZE](/indicators/numerics/standardize.md) | Standardization (Z-score) | Numerics |
 | [STARC](/indicators/volatility/starc.md) | Starc Bands | Volatility |
 | [STARCHANNEL](/indicators/channels/starchannel.md) | Stoller Average Range Channel | Channels |
@@ -223,6 +231,7 @@
 | [STOCHF](/indicators/oscillators/stochf.md) | Stochastic Fast | Oscillators |
 | [STOCHRSI](/indicators/oscillators/stochrsi.md) | Stochastic RSI | Oscillators |
 | [SUPER](/indicators/dynamics/super.md) | SuperTrend | Dynamics |
+| [SWINGS](/indicators/reversals/swings.md) | Swing High/Low Detection | Reversals |
 | [T3](/indicators/trends_IIR/t3.md) | Tillson T3 MA | Trends (IIR) |
 | [TANH](/indicators/numerics/tanh.md) | Hyperbolic Tangent | Numerics |
 | [TEMA](/indicators/trends_IIR/tema.md) | Triple Exponential MA | Trends (IIR) |
@@ -231,14 +240,15 @@
 | [TRIX](/indicators/oscillators/trix.md) | Triple Exponential Average | Oscillators |
 | [TSI](/indicators/momentum/tsi.md) | True Strength Index | Momentum |
 | [TTM](/indicators/dynamics/ttm.md) | TTM Trend | Dynamics |
-| [TWAP](/indicators/volume/twap.md) | Time Weighted Average Price | Volume |
 | [TVI](/indicators/volume/tvi.md) | Trade Volume Index | Volume |
+| [TWAP](/indicators/volume/twap.md) | Time Weighted Average Price | Volume |
 | [UBANDS](/indicators/channels/ubands.md) | Ultimate Bands | Channels |
 | [UCHANNEL](/indicators/channels/uchannel.md) | Ultimate Channel | Channels |
 | [UI](/indicators/volatility/ui.md) | Ulcer Index | Volatility |
 | [ULTOSC](/indicators/oscillators/ultosc.md) | Ultimate Oscillator | Oscillators |
 | [USF](/indicators/filters/usf.md) | Ehlers Ultrasmooth Filter | Filters |
 | [VA](/indicators/volume/va.md) | Volume Accumulation | Volume |
+| [VAMA](/indicators/trends_IIR/vama.md) | Volatility Adjusted Moving Average | Trends (IIR) |
 | [VARIANCE](/indicators/statistics/variance.md) | Variance | Statistics |
 | [VEL](/indicators/momentum/vel.md) | Jurik Velocity | Momentum |
 | [VF](/indicators/volume/vf.md) | Volume Force | Volume |
@@ -248,15 +258,16 @@
 | [VOV](/indicators/volatility/vov.md) | Volatility of Volatility | Volatility |
 | [VR](/indicators/volatility/vr.md) | Volatility Ratio | Volatility |
 | [VROC](/indicators/volume/vroc.md) | Volume Rate of Change | Volume |
+| [VWAD](/indicators/volume/vwad.md) | Volume Weighted Accumulation/Distribution | Volume |
 | [VWAP](/indicators/volume/vwap.md) | Volume Weighted Average Price | Volume |
 | [VWAPBANDS](/indicators/channels/vwapbands.md) | VWAP Bands | Channels |
-| [VWAD](/indicators/volume/vwad.md) | Volume Weighted Accumulation/Distribution | Volume |
 | [VWMA](/indicators/volume/vwma.md) | Volume Weighted MA | Volume |
 | [WAD](/indicators/volume/wad.md) | Williams Accumulation/Distribution | Volume |
 | [WIENER](/indicators/filters/wiener.md) | Wiener Filter | Filters |
 | [WILLR](/indicators/oscillators/willr.md) | Williams %R | Oscillators |
 | [WMA](/indicators/trends_FIR/wma.md) | Weighted MA | Trends (FIR) |
 | [YZV](/indicators/volatility/yzv.md) | Yang-Zhang Volatility | Volatility |
+| [YZVAMA](/indicators/trends_IIR/yzvama.md) | Yang-Zhang Volatility Adjusted MA | Trends (IIR) |
 | [ZLDEMA](/indicators/trends_IIR/zldema.md) | Zero-Lag Double Exponential MA | Trends (IIR) |
 | [ZLEMA](/indicators/trends_IIR/zlema.md) | Zero-Lag Exponential MA | Trends (IIR) |
 | [ZLTEMA](/indicators/trends_IIR/zltema.md) | Zero-Lag Triple Exponential MA | Trends (IIR) |

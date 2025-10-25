@@ -264,6 +264,7 @@
   * [DMX: Jurik Directional Movement Index](/indicators/dynamics/dmx.md)
   * [DX: Directional Movement Index](/indicators/dynamics/dx.md)
   * [HT_TRENDMODE: Hilbert Transform Trend Mode](/indicators/dynamics/ht_trendmode.md)
+  * [ICHIMOKU: Ichimoku Cloud](/indicators/dynamics/ichimoku.md)
   * [IMI: Intraday Momentum Index](/indicators/dynamics/imi.md)
   * [QSTICK: Qstick Indicator](/indicators/dynamics/qstick.md)
   * [SUPER: SuperTrend](/indicators/dynamics/super.md)
