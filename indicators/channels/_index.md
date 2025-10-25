@@ -23,3 +23,4 @@
 | [UBANDS](/indicators/channels/ubands.md) | Ultimate Bands | Modified Bollinger Bands that use Ehlers' Ultrasmooth Filter to minimize lag |
 | [UCHANNEL](/indicators/channels/uchannel.md) | Ultimate Channel | Modified Keltner Channel that uses Ehlers' Ultrasmooth Filter to reduce lag |
 | [VWAPBANDS](/indicators/channels/vwapbands.md) | VWAP Bands | Bands plotted N standard deviations above and below the Volume Weighted Average Price (VWAP) |
+| [VWAPSD](/indicators/channels/vwapsd.md) | VWAP with Standard Deviation Bands | Volume-weighted average price with statistical bands that reset at session boundaries |

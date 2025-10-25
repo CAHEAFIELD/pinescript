@@ -266,6 +266,7 @@
 | [VWAD](/indicators/volume/vwad.md) | Volume Weighted Accumulation/Distribution | Volume |
 | [VWAP](/indicators/volume/vwap.md) | Volume Weighted Average Price | Volume |
 | [VWAPBANDS](/indicators/channels/vwapbands.md) | VWAP Bands | Channels |
+| [VWAPSD](/indicators/channels/vwapsd.md) | VWAP with Standard Deviation Bands | Channels |
 | [VWMA](/indicators/volume/vwma.md) | Volume Weighted MA | Volume |
 | [WAD](/indicators/volume/wad.md) | Williams Accumulation/Distribution | Volume |
 | [WIENER](/indicators/filters/wiener.md) | Wiener Filter | Filters |

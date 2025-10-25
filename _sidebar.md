@@ -227,6 +227,7 @@
   * [UBANDS: Ultimate Bands](/indicators/channels/ubands.md)
   * [UCHANNEL: Ultimate Channel](/indicators/channels/uchannel.md)
   * [VWAPBANDS: VWAP Bands](/indicators/channels/vwapbands.md)
+  * [VWAPSD: VWAP with Standard Deviation Bands](/indicators/channels/vwapsd.md)
 
 * [Volume](/indicators/volume/_index.md)
   * [ADL: Accumulation/Distribution Line](/indicators/volume/adl.md)
