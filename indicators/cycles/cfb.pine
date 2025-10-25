@@ -1,202 +1,196 @@
 // The MIT License (MIT)
-// © pinescriptmaster
+// © mihakralj
 //@version=6
 indicator("Composite Fractal Behavior (CFB)", "CFB", overlay=false)
 
-//@function Calculates auxiliary CFB values based on price series and depth
+//@function Calculates CFB auxiliary value for a single depth
 //@doc https://github.com/mihakralj/pinescript/blob/main/indicators/cycles/cfb.md
-//@param source Series to analyze for fractal patterns
-//@param depth Lookback period for analyzing price changes
+//@param source Price series to analyze
+//@param depth Lookback period for fractal pattern analysis
+//@param maxSize Maximum buffer size (must be >= depth)
 //@returns Ratio representing fractal behavior at specified depth
-//@optimized for performance and incremental calculation
-jcfbaux(series float source, series int depth) =>  // Changed to accept series int
-    var float absChangeSum = 0.0
-    var float weightedChangeSum = 0.0
-    var float levelSum = 0.0
-
-    if bar_index >= depth * 2
-        if bar_index == depth * 2
-            // Initialize sums on first valid bar
-            for k = depth - 1 to 0
-                float currentDiff = math.abs(nz(source[k]) - nz(source[k+1]))
-                absChangeSum := absChangeSum + currentDiff
-                weightedChangeSum := weightedChangeSum + (depth + k) * currentDiff
-                levelSum := levelSum + nz(source[k+1])
-        else
-            // Update sums incrementally
-            float currentDiff = math.abs(source - nz(source[1]))
-            float oldestDiff = math.abs(nz(source[depth]) - nz(source[depth+1]))
-            absChangeSum := absChangeSum - oldestDiff + currentDiff
-            weightedChangeSum := weightedChangeSum - absChangeSum + (currentDiff * depth)
-            levelSum := levelSum - nz(source[depth+1]) + nz(source[1])
-
-        float levelCompare = math.abs(depth * source - levelSum)
-        float result = weightedChangeSum > 0.0 ? levelCompare / weightedChangeSum : 0.0
-        result
+//@optimized O(n) complexity required for fractal pattern calculation across depth range
+cfb_aux(series float source, series int depth, simple int maxSize) =>
+    if maxSize < depth
+        runtime.error("maxSize must be greater than or equal to depth")
+    
+    var array<float> buffer = array.new_float(maxSize, na)
+    var int head = 0
+    var int count = 0
+    
+    float current = nz(source)
+    array.set(buffer, head, current)
+    head := (head + 1) % maxSize
+    
+    if count < maxSize
+        count += 1
+    
+    int effectiveDepth = int(math.min(depth, count - 1))
+    int actualCount = math.max(1, count)
+    
+    if effectiveDepth > 0
+        float sumAbs = 0.0
+        float sumWeighted = 0.0
+        float sumLevel = 0.0
+        
+        for i = 0 to effectiveDepth - 1
+            int idx1 = (head - effectiveDepth + i + maxSize) % maxSize
+            int idx2 = (head - effectiveDepth + i + 1 + maxSize) % maxSize
+            float val1 = nz(array.get(buffer, idx1))
+            float val2 = nz(array.get(buffer, idx2))
+            float absDiff = math.abs(val1 - val2)
+            
+            sumAbs += absDiff
+            sumWeighted += absDiff * (effectiveDepth - i)
+            sumLevel += val2
+        
+        int currentIdx = (head - 1 + maxSize) % maxSize
+        float currentVal = nz(array.get(buffer, currentIdx))
+        float levelCompare = math.abs(effectiveDepth * currentVal - sumLevel)
+        
+        float result = sumWeighted > 0.0 ? levelCompare / sumWeighted : 0.0
+        float compensator = float(effectiveDepth + 1) / float(depth + 1)
+        result * compensator
     else
         0.0
 
-//@function Calculates Composite Fractal Behavior across multiple timeframes
+//@function Calculates Composite Fractal Behavior across multiple depths
 //@doc https://github.com/mihakralj/pinescript/blob/main/indicators/cycles/cfb.md
-//@param source Series to analyze for fractal patterns
-//@param depth Depth parameter controlling timeframe analysis (1-10)
-//@param smoothLength Smoothing period for the calculation
-//@returns Composite Fractal Behavior value representing dominant market cycle
-//@optimized for memory efficiency and performance
-jcfb(series float source, simple int depth, simple int smoothLength) =>
-    // Initialize arrays on first bar
-    var array<float> powArray = array.new_float(depth * 2, 0.0)
-    var array<float> cumSumArray = array.new_float(depth * 2, 0.0)
-    var array<float> cfbValues = array.new_float(depth * 2, 0.0)
-    var array<float> smoothedValues = array.new_float(depth * 2, 0.0)
-    var array<float> weightedValues = array.new_float(depth * 2, 0.0)
-    var bool arraysInitialized = false
+//@param source Price series to analyze
+//@param maxDepth Maximum depth level (1-10)
+//@param length Smoothing period for CFB values
+//@returns CFB value representing dominant cycle period
+//@optimized O(n²) complexity required for multi-depth fractal analysis
+cfb(series float source, simple int maxDepth, simple int length) =>
+    if maxDepth < 1 or maxDepth > 10
+        runtime.error("maxDepth must be between 1 and 10")
+    if length < 1
+        runtime.error("length must be greater than 0")
+    
+    int numDepths = maxDepth * 2
+    int maxBufferSize = int(2 + math.pow(2, maxDepth - 1) * maxDepth * 2)
+    
+    var array<int> periods = array.new_int(numDepths, 0)
+    var array<float> cfbValues = array.new_float(numDepths, 0.0)
+    var array<float> smoothed = array.new_float(numDepths, 0.0)
+    var array<float> weighted = array.new_float(numDepths, 0.0)
+    var bool initialized = false
+    
+    if not initialized
+        initialized := true
+        int cumSum = 2
+        for i = 0 to numDepths - 1
+            int powerIdx = int(i / 2)
+            int period = int(math.pow(2, powerIdx))
+            array.set(periods, i, cumSum)
+            cumSum += period
+    
+    for i = 0 to numDepths - 1
+        int period = array.get(periods, i)
+        float cfbVal = cfb_aux(source, period, maxBufferSize)
+        array.set(cfbValues, i, cfbVal)
+    
+    float alpha = 2.0 / (length + 1)
+    for i = 0 to numDepths - 1
+        float cfbVal = array.get(cfbValues, i)
+        float prevSmoothed = array.get(smoothed, i)
+        float newSmoothed = na(prevSmoothed) ? cfbVal : alpha * cfbVal + (1 - alpha) * prevSmoothed
+        array.set(smoothed, i, newSmoothed)
+    
+    float factorA = 1.0
+    float factorB = 1.0
+    
+    for i = 0 to numDepths - 1
+        float smoothVal = array.get(smoothed, i)
+        if i % 2 == 0
+            float w = factorB * smoothVal
+            array.set(weighted, i, w)
+            factorB := factorB * (1.0 - smoothVal)
+        else
+            float w = factorA * smoothVal
+            array.set(weighted, i, w)
+            factorA := factorA * (1.0 - smoothVal)
+    
+    float sumWeightedSq = 0.0
+    float sumSq = 0.0
+    
+    for i = 0 to numDepths - 1
+        float w = array.get(weighted, i)
+        float wSq = w * w
+        sumSq += wSq
+        sumWeightedSq += wSq * array.get(periods, i)
+    
+    float result = sumSq > 0.0 ? sumWeightedSq / sumSq : 0.0
+    math.max(1.0, result)
 
-    // Initialize arrays only once
-    if not arraysInitialized
-        arraysInitialized := true
-        // Build power and cumulative sum arrays
-        float cumSum = 2.0
-        for i = 0 to depth * 2 - 1
-            int powerIndex = int(i / 2)
-            float powerValue = math.pow(2, powerIndex)
-            array.set(powArray, i, powerValue)
-            array.set(cumSumArray, i, cumSum)
-            cumSum += powerValue
-
-    // Calculate CFB auxiliary values for each timeframe
-    int arraySize = array.size(cumSumArray)
-    for i = 0 to arraySize - 1
-        int timeframePeriod = int(array.get(cumSumArray, i))
-        array.set(cfbValues, i, jcfbaux(source, timeframePeriod))
-
-    // Apply smoothing logic
-    if bar_index <= smoothLength
-        // Accumulate values during initialization period
-        if bar_index > 0
-            for k = 0 to arraySize - 1
-                float currentValue = array.get(smoothedValues, k)
-                float newValue = currentValue + array.get(cfbValues, k)
-                array.set(smoothedValues, k, newValue)
-
-            // Normalize by bar count on last initialization bar
-            if bar_index == smoothLength
-                for k = 0 to arraySize - 1
-                    float currentValue = array.get(smoothedValues, k)
-                    array.set(smoothedValues, k, currentValue / smoothLength)
-    else
-        // Moving window smoothing after initialization
-        for k = 0 to arraySize - 1
-            float currentValue = array.get(smoothedValues, k)
-            float newSample = array.get(cfbValues, k)
-            float oldSample = nz(array.get(cfbValues, k)[smoothLength])
-            float updatedValue = currentValue + (newSample - oldSample) / smoothLength
-            array.set(smoothedValues, k, updatedValue)
-
-    float result = 0.0
-    // Calculate weighted values for final composition
-    if bar_index > 5
-        float factorA = 1.0
-        float factorB = 1.0
-
-        for k = 0 to arraySize - 1
-            float smoothedValue = array.get(smoothedValues, k)
-            if k % 2 == 0
-                float weightedValue = factorB * smoothedValue
-                array.set(weightedValues, k, weightedValue)
-                factorB := factorB * (1.0 - weightedValue)
-            else
-                float weightedValue = factorA * smoothedValue
-                array.set(weightedValues, k, weightedValue)
-                factorA := factorA * (1.0 - weightedValue)
-
-        // Compute final composite value
-        float weightedSquareSum = 0.0
-        float squareSum = 0.0
-
-        for i = 0 to arraySize - 1
-            float weightedValue = array.get(weightedValues, i)
-            float squaredValue = weightedValue * weightedValue
-            squareSum += squaredValue
-            weightedSquareSum += squaredValue * array.get(cumSumArray, i)
-
-        result := squareSum > 0.0 ? weightedSquareSum / squareSum : 0.0
-
-    result
-
-//@function Jurik Moving Average - adaptive smoothing function
+//@function Jurik Moving Average for additional smoothing
+//@doc https://github.com/mihakralj/pinescript/blob/main/indicators/cycles/cfb.md
 //@param source Series to smooth
 //@param period Smoothing period
 //@param phase Phase adjustment (-100 to 100)
-//@returns Smoothed JMA value
+//@param power Power parameter for responsiveness
+//@returns Smoothed value
+//@optimized Adaptive smoothing with volatility-based responsiveness
 jma(series float source, simple int period, simple int phase = 0, simple float power = 0.45) =>
-    var simple float PHASE_VALUE = math.min(math.max((phase * 0.01) + 1.5, 0.5), 2.5)
-    var simple float BETA = power * (period - 1) / ((power * (period - 1)) + 2)
-    var simple float LEN1 = math.max((math.log(math.sqrt(0.5*(period-1))) / math.log(2.0)) + 2.0, 0)
-    var simple float POW1 = math.max(LEN1 - 2.0, 0.5)
-    var simple float LEN2 = math.sqrt(0.5*(period-1))*LEN1
-    var simple float POW1_RECIPROCAL = 1.0 / POW1
-    var simple float AVG_VOLTY_ALPHA = 2.0 / (math.max(4.0 * period, 65) + 1.0)
-    var simple float DIV = 1.0/(10.0 + 10.0*(math.min(math.max(period-10,0),100))/100.0)
-    var float upperBand_state = na
-    var float lowerBand_state = na
-    var float ma1_state = na
-    var float jma_state = na
-    var float vSum_state = 0.0
-    var float det0_state = 0.0
-    var float det1_state = 0.0
-    var float avgVolty_state = na
-    var volty_array_state = array.new_float(11, 0.0)
-    float current_jma = na
+    if period < 1
+        runtime.error("period must be greater than 0")
+    float phaseRatio = math.min(math.max(phase * 0.01 + 1.5, 0.5), 2.5)
+    float beta = power * (period - 1) / (power * (period - 1) + 2)
+    float len1 = math.max(math.log(math.sqrt(0.5 * (period - 1))) / math.log(2.0) + 2.0, 0.0)
+    float pow1 = math.max(len1 - 2.0, 0.5)
+    float len2 = math.sqrt(0.5 * (period - 1)) * len1
+    float alpha_volty = 2.0 / (math.max(4.0 * period, 65.0) + 1.0)
+    float div = 1.0 / (10.0 + 10.0 * (math.min(math.max(period - 10, 0), 100)) / 100.0)
+    
+    var float upperBand = na
+    var float lowerBand = na
+    var float ma1 = na
+    var float jma_val = na
+    var float vSum = 0.0
+    var float det0 = 0.0
+    var float det1 = 0.0
+    var float avgVolty = na
+    var array<float> voltyArray = array.new_float(11, 0.0)
+    
     if not na(source)
-        float del1 = source - nz(upperBand_state, source)
-        float del2 = source - nz(lowerBand_state, source)
+        float del1 = source - nz(upperBand, source)
+        float del2 = source - nz(lowerBand, source)
         float volty = math.abs(del1) == math.abs(del2) ? 0.0 : math.max(math.abs(del1), math.abs(del2))
-        array.unshift(volty_array_state, nz(volty, 0.0))
-        array.pop(volty_array_state)
-        if not na(volty)
-            vSum_state := vSum_state + (volty - array.get(volty_array_state, 10)) * DIV
-            avgVolty_state := nz(avgVolty_state, vSum_state) + AVG_VOLTY_ALPHA * (vSum_state - nz(avgVolty_state, vSum_state))
-        float rvolty = math.min(math.max(nz(avgVolty_state, 0) > 0 ? nz(volty, 0.0) / nz(avgVolty_state, 1.0) : 1.0, 1.0), math.pow(LEN1, POW1_RECIPROCAL))
-        float pow2 = math.pow(rvolty, POW1)
-        float Kv = math.pow(LEN2/(LEN2+1), math.sqrt(pow2))
-        upperBand_state := del1 > 0 ? source : source - Kv * del1
-        lowerBand_state := del2 < 0 ? source : source - Kv * del2
-        float alpha = math.pow(BETA, pow2)
-        float alphaSquared = alpha * alpha
-        float oneMinusAlpha = 1.0 - alpha
-        float oneMinusAlphaSquared = oneMinusAlpha * oneMinusAlpha
-        ma1_state := source + (alpha * (nz(ma1_state, source) - source))
-        det0_state := (source - ma1_state) * (1 - BETA) + BETA * nz(det0_state, 0)
-        float ma2 = ma1_state + (PHASE_VALUE * det0_state)
-        det1_state := ((ma2 - nz(jma_state, source)) * oneMinusAlphaSquared) + (alphaSquared * nz(det1_state, 0))
-        jma_state := nz(jma_state, source) + det1_state
-        current_jma := jma_state
-    current_jma
+        
+        array.unshift(voltyArray, volty)
+        array.pop(voltyArray)
+        
+        vSum := vSum + (volty - array.get(voltyArray, 10)) * div
+        avgVolty := na(avgVolty) ? vSum : avgVolty + alpha_volty * (vSum - avgVolty)
+        
+        float rvolty = math.min(math.max(avgVolty > 0 ? volty / avgVolty : 1.0, 1.0), math.pow(len1, 1.0 / pow1))
+        float pow2 = math.pow(rvolty, pow1)
+        float kv = math.pow(len2 / (len2 + 1), math.sqrt(pow2))
+        
+        upperBand := del1 > 0 ? source : source - kv * del1
+        lowerBand := del2 < 0 ? source : source - kv * del2
+        
+        float alphaAdapt = math.pow(beta, pow2)
+        
+        ma1 := source + alphaAdapt * (nz(ma1, source) - source)
+        det0 := (source - ma1) * (1 - beta) + beta * det0
+        
+        float ma2 = ma1 + phaseRatio * det0
+        det1 := (ma2 - nz(jma_val, source)) * (1 - alphaAdapt) * (1 - alphaAdapt) + alphaAdapt * alphaAdapt * det1
+        jma_val := nz(jma_val, source) + det1
+    
+    jma_val
 
 // ---------- Main loop ----------
 
-// Inputs
-i_source = input.source(hlcc4, "Source",
-     tooltip="Price series to analyze for fractal behavior")
-i_depth = input.int(10, "CFB Depth", minval=1, maxval=10,
-     tooltip="Controls how many timeframes are analyzed (1-10)")
-i_smooth = input.int(8, "Smooth Length", minval=1,
-     tooltip="Number of bars used to smooth the CFB calculation")
-i_jma_period = input.int(5, "JMA Period", minval=1,
-     tooltip="Smoothing period for Jurik filter")
-i_jma_phase = input.int(0, "JMA Phase", minval=-100, maxval=100,
-     tooltip="Phase shift for Jurik filter (-100 to 100)")
+i_source = input.source(hlcc4, "Source")
+i_depth = input.int(10, "CFB Depth", minval=1, maxval=10)
+i_length = input.int(8, "Smooth Length", minval=1)
+i_jma_period = input.int(5, "JMA Period", minval=1)
+i_jma_phase = input.int(0, "JMA Phase", minval=-100, maxval=100)
 
-// Calculation with double smoothing
-cfb_value = jcfb(i_source, i_depth, i_smooth)
-cfb_smoothed = jma(jma(cfb_value, i_jma_period, i_jma_phase), i_jma_period, i_jma_phase)
+cfb_raw = cfb(i_source, i_depth, i_length)
+cfb_smoothed = jma(jma(cfb_raw, i_jma_period, i_jma_phase), i_jma_period, i_jma_phase)
+cfb_final = math.max(1, math.ceil(cfb_smoothed))
 
-// Ensure minimum value is 1
-cfb_final = math.ceil(cfb_smoothed) < 1 ? 1 : math.ceil(cfb_smoothed)
-
-// Color settings
-color_cfb = color.new(#2DD204, 0)  // Green color
-
-// Plot
 plot(cfb_final, "CFB", color=color.yellow, linewidth=2)
