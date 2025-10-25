@@ -189,6 +189,7 @@
   * [AC: Acceleration Oscillator](/indicators/oscillators/ac.md)
   * [AO: Awesome Oscillator](/indicators/oscillators/ao.md)
   * [BBB: Bollinger %B](/indicators/oscillators/bbb.md)
+  * [BBS: Bollinger Band Squeeze](/indicators/oscillators/bbs.md)
   * [BOP: Balance of Power](/indicators/oscillators/bop.md)
   * [CCI: Commodity Channel Index](/indicators/oscillators/cci.md)
   * [DPO: Detrended Price Oscillator](/indicators/oscillators/dpo.md)

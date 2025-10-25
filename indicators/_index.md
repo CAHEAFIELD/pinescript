@@ -32,6 +32,7 @@
 | [BBW](/indicators/volatility/bbw.md) | Bollinger Band Width | Volatility |
 | [BBWN](/indicators/volatility/bbwn.md) | Bollinger Band Width Normalized | Volatility |
 | [BBWP](/indicators/volatility/bbwp.md) | Bollinger Band Width Percentile | Volatility |
+| [BBS](/indicators/oscillators/bbs.md) | Bollinger Band Squeeze | Oscillators |
 | [BESSEL](/indicators/filters/bessel.md) | Bessel Filter | Filters |
 | [BETA](/indicators/statistics/beta.md) | Beta Coefficient | Statistics |
 | [BIAS](/indicators/statistics/bias.md) | Bias | Statistics |
