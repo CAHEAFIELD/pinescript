@@ -5,6 +5,7 @@
 | [ABBER](/indicators/channels/abber.md) | Aberration | Measures deviation from a central moving average, often used with Bollinger Bands |
 | [ACCBANDS](/indicators/channels/accbands.md) | Acceleration Bands | Bands plotted around a simple moving average, adjusting width based on volatility |
 | [APCHANNEL](/indicators/channels/apchannel.md) | Andrews' Pitchfork | Trend channel tool using three points to project potential support/resistance levels |
+| [APZ](/indicators/channels/apz.md) | Adaptive Price Zone | Volatility-based bands using double-smoothed EMA for identifying reversals in non-trending markets |
 | [ATRBANDS](/indicators/channels/atrbands.md) | ATR Bands | Bands plotted N times the Average True Range (ATR) above and below a moving average |
 | [BBANDS](/indicators/channels/bbands.md) | Bollinger Bands | Bands plotted N standard deviations away from a simple moving average |
 | [DCHANNEL](/indicators/channels/dchannel.md) | Donchian Channel | Plots highest high and lowest low over a period, identifying breakouts |

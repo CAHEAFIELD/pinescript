@@ -19,6 +19,7 @@
 | [AOBV](/indicators/volume/aobv.md) | Archer On-Balance Volume | Volume |
 | [APCHANNEL](/indicators/channels/apchannel.md) | Andrews' Pitchfork | Channels |
 | [APO](/indicators/oscillators/apo.md) | Absolute Price Oscillator | Oscillators |
+| [APZ](/indicators/channels/apz.md) | Adaptive Price Zone | Channels |
 | [AROON](/indicators/dynamics/aroon.md) | Aroon | Dynamics |
 | [AROONOSC](/indicators/dynamics/aroonosc.md) | Aroon Oscillator | Dynamics |
 | [ATAN2](/indicators/numerics/atan2.md) | Two-Argument Arctangent | Numerics |
@@ -146,6 +147,7 @@
 | [MASSI](/indicators/volatility/massi.md) | Mass Index | Volatility |
 | [ME](/indicators/errors/me.md) | Mean Error | Errors |
 | [MEDIAN](/indicators/statistics/median.md) | Median (Statistical) | Statistics |
+| [NATR](/indicators/volatility/natr.md) | Normalized Average True Range | Volatility |
 | [MFI](/indicators/volume/mfi.md) | Money Flow Index | Volume |
 | [MGDI](/indicators/trends_IIR/mgdi.md) | McGinley Dynamic Indicator | Trends (IIR) |
 | [MIDPOINT](/indicators/numerics/midpoint.md) | (Highest + Lowest) / 2 | Numerics |
@@ -236,6 +238,7 @@
 | [TANH](/indicators/numerics/tanh.md) | Hyperbolic Tangent | Numerics |
 | [TEMA](/indicators/trends_IIR/tema.md) | Triple Exponential MA | Trends (IIR) |
 | [THEIL](/indicators/statistics/theil.md) | Theil Index | Statistics |
+| [TR](/indicators/volatility/tr.md) | True Range | Volatility |
 | [TRIMA](/indicators/trends_FIR/trima.md) | Triangular MA | Trends (FIR) |
 | [TRIX](/indicators/oscillators/trix.md) | Triple Exponential Average | Oscillators |
 | [TSI](/indicators/momentum/tsi.md) | True Strength Index | Momentum |
