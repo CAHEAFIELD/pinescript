@@ -28,6 +28,7 @@
 | [THEIL](/indicators/statistics/theil.md) | Theil Index | Measures inequality or concentration in a dataset |
 | [VARIANCE](/indicators/statistics/variance.md) | Variance | Measures the average squared difference from the mean |
 | [ZSCORE](/indicators/statistics/zscore.md) | Z-score Standardization | Indicates how many standard deviations an element is from the mean |
+| [ZTEST](/indicators/statistics/ztest.md) | Z-Test | Statistical hypothesis test comparing sample mean to hypothesized population mean |
 | ACF | Autocorrelation Function | Measures correlation between observations at different times in a time series |
 | PACF | Partial Autocorrelation | Correlation between observations separated by k lags without intermediate correlations |
 | POLYFIT | Polynomial Fitting | Fits a polynomial curve to data points |

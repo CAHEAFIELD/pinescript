@@ -138,6 +138,7 @@
   * [THEIL: Theil Index](/indicators/statistics/theil.md)
   * [VARIANCE: Variance](/indicators/statistics/variance.md)
   * [ZSCORE: Z-score standardization](/indicators/statistics/zscore.md)
+  * [ZTEST: Z-Test](/indicators/statistics/ztest.md)
 
 * [Volatility](/indicators/volatility/_index.md)
   * [ADR: Average Daily Range](/indicators/volatility/adr.md)
