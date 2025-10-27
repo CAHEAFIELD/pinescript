@@ -18,10 +18,10 @@ qema(series float source, simple int period=0, simple float alpha=0.0) =>
     float a2 = a1 * r
     float a3 = a2 * r
     float a4 = a3 * r
-    float d1 = 1.0 - a1
-    float d2 = 1.0 - a2
-    float d3 = 1.0 - a3
-    float d4 = 1.0 - a4
+    float beta1 = 1.0 - a1
+    float beta2 = 1.0 - a2
+    float beta3 = 1.0 - a3
+    float beta4 = 1.0 - a4
     var float e1 = 1.0
     var float e2 = 1.0
     var float e3 = 1.0
@@ -37,10 +37,10 @@ qema(series float source, simple int period=0, simple float alpha=0.0) =>
     var float ema4 = source
     rema1 := a1 * (source - rema1) + rema1
     if warmup
-        e1 *= d1
-        e2 *= d2
-        e3 *= d3
-        e4 *= d4
+        e1 *= beta1
+        e2 *= beta2
+        e3 *= beta3
+        e4 *= beta4
         float c1 = 1.0 / (1.0 - e1)
         float c2 = 1.0 / (1.0 - e2)
         float c3 = 1.0 / (1.0 - e3)

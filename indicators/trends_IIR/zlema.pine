@@ -14,6 +14,7 @@ zlema(series float source, simple int period=0, simple float alpha=0) =>
     if alpha <= 0 and period <= 0
         runtime.error("Alpha or period must be provided")
     float a = alpha > 0 ? alpha : 2.0 / (period + 1)
+    float beta = 1.0 - a
     simple int lag = math.max(1, math.round((period - 1) / 2))
     var bool warmup = true
     var float e = 1.0
@@ -27,7 +28,7 @@ zlema(series float source, simple int period=0, simple float alpha=0) =>
         float signal = 2 * source - laggedPrice
         zlema := a * (signal - zlema) + zlema
         if warmup
-            e *= (1 - a)
+            e *= beta
             float c = 1.0 / (1.0 - e)
             result := c * zlema
             warmup := e > 1e-10

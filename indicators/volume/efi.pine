@@ -16,6 +16,7 @@ efi(len = 13, src = close, src_vol = volume) =>
     float raw_force = (nz(src) - nz(prev_src)) * nz(src_vol)
     prev_src := src
     float a = 2.0 / (len + 1.0)
+    float beta = 1.0 - a
     var float ema = na
     var float result = na
     var float e = 1.0
@@ -26,7 +27,7 @@ efi(len = 13, src = close, src_vol = volume) =>
     else
         ema := a * (raw_force - ema) + ema
         if warmup
-            e *= (1 - a)
+            e *= beta
             float c = 1.0 / (1.0 - e)
             result := c * ema
             if e <= 1e-10

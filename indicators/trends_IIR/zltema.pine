@@ -14,6 +14,7 @@ zltema(series float source, simple int period=0, simple float alpha=0) =>
     if alpha <= 0 and period <= 0
         runtime.error("Alpha or period must be provided")
     float a1 = alpha > 0 ? alpha : 2.0 / (period + 1)
+    float beta1 = 1.0 - a1
     float r = math.pow(1.0 / a1, 1.0 / 3.0)
     float a2 = a1 * r
     float a3 = a2 * r
@@ -39,7 +40,7 @@ zltema(series float source, simple int period=0, simple float alpha=0) =>
         float signal = 2 * source - laggedPrice
         ema1_raw := a1 * (signal - ema1_raw) + ema1_raw
         if warmup
-            e *= (1 - a1)
+            e *= beta1
             float c = 1.0 / (1.0 - e)
             ema1 := c * ema1_raw
             ema2_raw := a2 * (ema1 - ema2_raw) + ema2_raw

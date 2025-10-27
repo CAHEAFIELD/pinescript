@@ -14,6 +14,7 @@ dema(series float source, simple int period=0, simple float alpha=0) =>
     if alpha <= 0 and period <= 0
         runtime.error("Alpha or period must be provided")
     float a = alpha > 0 ? alpha : 2.0 / (period + 1)
+    float beta = 1.0 - a
     var bool warmup = true
     var float e = 1.0
     var float ema1_raw = 0.0
@@ -22,7 +23,7 @@ dema(series float source, simple int period=0, simple float alpha=0) =>
     var float ema2 = source
     ema1_raw := a * (source - ema1_raw) + ema1_raw
     if warmup
-        e *= (1 - a)
+        e *= beta
         float c = 1.0 / (1.0 - e)
         ema1 := c * ema1_raw
         ema2_raw := a * (ema1 - ema2_raw) + ema2_raw

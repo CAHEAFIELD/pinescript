@@ -13,13 +13,14 @@ rma(series float source, simple int period) =>
     if period <= 0
         runtime.error("Period must be provided")
     float a = 1.0 / float(period)
+    float beta = 1.0 - a
     var bool warmup = true
     var float e = 1.0
     var float ema = 0.0
     var float result = source
     ema := a * (source - ema) + ema
     if warmup
-        e *= (1 - a)
+        e *= beta
         float c = 1.0 / (1.0 - e)
         result := c * ema
         warmup := e > 1e-10

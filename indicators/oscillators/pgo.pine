@@ -40,6 +40,7 @@ pgo(series float source, simple int period) =>
     float tr = math.max(tr1, math.max(tr2, tr3))
     
     float a = 1.0 / float(period)
+    float beta = 1.0 - a
     var bool warmup = true
     var float e = 1.0
     var float ema = 0.0
@@ -48,7 +49,7 @@ pgo(series float source, simple int period) =>
     ema := a * (nz(tr) - ema) + ema
     
     if warmup
-        e *= (1 - a)
+        e *= beta
         float c = 1.0 / (1.0 - e)
         atr := c * ema
         warmup := e > 1e-10
