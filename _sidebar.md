@@ -1,5 +1,6 @@
 * [Forecasts](/indicators/forecasts/_index.md)
   * [AFIRMA: Autoregressive FIR MA](/indicators/forecasts/afirma.md)
+  * [TSF: Time Series Forecast](/indicators/forecasts/tsf.md)
 
 * [Trends - FIR](/indicators/trends_FIR/_index.md)
   * [ALMA: Arnaud Legoux MA](/indicators/trends_FIR/alma.md)
@@ -193,6 +194,7 @@
   * [BBS: Bollinger Band Squeeze](/indicators/oscillators/bbs.md)
   * [BOP: Balance of Power](/indicators/oscillators/bop.md)
   * [CCI: Commodity Channel Index](/indicators/oscillators/cci.md)
+  * [CFO: Chande Forecast Oscillator](/indicators/oscillators/cfo.md)
   * [DPO: Detrended Price Oscillator](/indicators/oscillators/dpo.md)
   * [FISHER: Fisher Transform](/indicators/oscillators/fisher.md)
   * [INERTIA: Inertia](/indicators/oscillators/inertia.md)

@@ -16,17 +16,17 @@ sma(series float source, simple int period) =>
     var array<float> buffer = array.new_float(p, na)
     var int head = 0
     var float sum = 0.0
-    var int valid_count = 0
+    var int count = 0
     float oldest = array.get(buffer, head)
     if not na(oldest)
         sum -= oldest
-        valid_count -= 1
-    if not na(source)
-        sum += source
-        valid_count += 1
-    array.set(buffer, head, source)
+    else
+        count += 1
+    float current = nz(source)
+    sum += current
+    array.set(buffer, head, current)
     head := (head + 1) % p
-    nz(sum / valid_count, source)
+    sum / math.max(1, count)
 
 // ---------- Main loop ----------
 

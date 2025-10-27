@@ -45,6 +45,7 @@
 | [CCI](/indicators/momentum/cci.md) | Commodity Channel Index | Momentum |
 | [CCV](/indicators/volatility/ccv.md) | Close-to-Close Volatility | Volatility |
 | [CFB](/indicators/cycles/cfb.md) | Composite Fractal Behavior | Cycles |
+| [CFO](/indicators/oscillators/cfo.md) | Chande Forecast Oscillator | Oscillators |
 | [CG](/indicators/cycles/cg.md) | Center of Gravity | Cycles |
 | [CHANGE](/indicators/numerics/change.md) | Percentage Change | Numerics |
 | [CHEBY1](/indicators/filters/cheby1.md) | Chebyshev Type I Filter | Filters |
@@ -243,6 +244,7 @@
 | [TR](/indicators/volatility/tr.md) | True Range | Volatility |
 | [TRIMA](/indicators/trends_FIR/trima.md) | Triangular MA | Trends (FIR) |
 | [TRIX](/indicators/oscillators/trix.md) | Triple Exponential Average | Oscillators |
+| [TSF](/indicators/forecasts/tsf.md) | Time Series Forecast | Forecasts |
 | [TSI](/indicators/momentum/tsi.md) | True Strength Index | Momentum |
 | [TTM](/indicators/dynamics/ttm.md) | TTM Trend | Dynamics |
 | [TVI](/indicators/volume/tvi.md) | Trade Volume Index | Volume |
