@@ -8,7 +8,7 @@ indicator("Close-to-Close Volatility (CCV)", "CCV", overlay=false)
 //@param length Period for volatility calculations
 //@param method Smoothing method (1=SMA, 2=EMA, 3=WMA)
 //@returns float Volatility value
-//@optimized for performance and dirty data
+//@optimized Beta precomputation for RMA warmup compensation
 ccv(simple int length, simple int method) =>
     if length <= 0
         runtime.error("Length must be greater than 0")
@@ -20,7 +20,7 @@ ccv(simple int length, simple int method) =>
     var array<float> buffer = array.new_float(p, na)
     var float sum = 0.0
     var float wsum = 0.0
-    float priceReturn = math.log(close/close[1])
+    float priceReturn = math.log(close / close[1])
     float oldest = array.get(buffer, head)
     if not na(oldest)
         sum -= oldest
@@ -35,19 +35,20 @@ ccv(simple int length, simple int method) =>
         float val = array.get(buffer, (head - i - 1 + p) % p)
         if not na(val)
             squaredSum += math.pow(val - mean, 2)
-    float annualizedStdDev = math.sqrt(squaredSum/count) * math.sqrt(252)
+    float annualizedStdDev = math.sqrt(squaredSum / count) * math.sqrt(252)
+    float alpha = 1.0 / float(length)
+    float beta = 1.0 - alpha
     var float EPSILON = 1e-10
-    var float raw_ema = 0.0
+    var float raw_rma = 0.0
     var float e = 1.0
     float result = na
-    if method == 1  // SMA
+    if method == 1
         result := annualizedStdDev
-    else if method == 2  // EMA
-        float alpha = 1.0/float(length)
-        raw_ema := (raw_ema * (length - 1) + annualizedStdDev) / length
-        e := (1 - alpha) * e
-        result := e > EPSILON ? raw_ema / (1.0 - e) : raw_ema
-    else  // WMA
+    else if method == 2
+        raw_rma := (raw_rma * (length - 1) + annualizedStdDev) / length
+        e *= beta
+        result := e > EPSILON ? raw_rma / (1.0 - e) : raw_rma
+    else
         float sumWeight = length * (length + 1) / 2
         float weightedSum = 0.0
         float weight = length

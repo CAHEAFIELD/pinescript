@@ -10,7 +10,7 @@ indicator("Percentage Volume Oscillator (PVO)", "PVO", overlay=false)
 //@param slow_period Slow period for volume MA
 //@param signal_period Signal line smoothing period
 //@returns tuple with [pvo, signal, histogram] values
-//@optimized for performance and dirty data
+//@optimized Beta precomputation for EMA warmup compensation
 pvo(series float vol, simple int fast_period, simple int slow_period, simple int signal_period) =>
     if fast_period <= 0 or slow_period <= 0 or signal_period <= 0
         runtime.error("All periods must be greater than 0")
@@ -20,14 +20,25 @@ pvo(series float vol, simple int fast_period, simple int slow_period, simple int
     float fast_alpha = 2.0 / (fast_period + 1)
     float slow_alpha = 2.0 / (slow_period + 1)
     float signal_alpha = 2.0 / (signal_period + 1)
-    float slowest_alpha = math.min(fast_alpha, slow_alpha, signal_alpha)
-    var bool warmup = true, var float e_fast = 1.0, var float e_slow = 1.0, var float e_signal = 1.0, var float e_slowest = 1.0
-    var float fast_ema = 0.0, var float slow_ema = 0.0, var float signal_ema = 0.0
+    float fast_beta = 1.0 - fast_alpha
+    float slow_beta = 1.0 - slow_alpha
+    float signal_beta = 1.0 - signal_alpha
+    float slowest_beta = math.max(fast_beta, slow_beta, signal_beta)
+    var bool warmup = true
+    var float e_fast = 1.0
+    var float e_slow = 1.0
+    var float e_signal = 1.0
+    var float e_slowest = 1.0
+    var float fast_ema = 0.0
+    var float slow_ema = 0.0
+    var float signal_ema = 0.0
     fast_ema := fast_alpha * (vol_val - fast_ema) + fast_ema
     slow_ema := slow_alpha * (vol_val - slow_ema) + slow_ema
     if warmup
-        e_fast *= (1 - fast_alpha), e_slow *= (1 - slow_alpha), e_signal *= (1 - signal_alpha)
-        e_slowest *= (1 - slowest_alpha)
+        e_fast *= fast_beta
+        e_slow *= slow_beta
+        e_signal *= signal_beta
+        e_slowest *= slowest_beta
         warmup := e_slowest > 1e-10
     float c_fast = warmup ? 1.0 / (1.0 - e_fast) : 1.0
     float c_slow = warmup ? 1.0 / (1.0 - e_slow) : 1.0
@@ -53,5 +64,5 @@ i_signal_period = input.int(9, "Signal Period", minval=1)
 // Plot
 plot(pvo_value, "PVO", color=color.yellow, linewidth=2)
 plot(signal_value, "Signal", color=color.red, linewidth=2)
-plot(histogram_value, "Histogram", color=color.blue, linewidth=2, plot.style_histogram)
+plot(histogram_value, "Histogram", color=color.blue, linewidth=2, style=plot.style_histogram)
 hline(0, "Zero Line", color.gray)

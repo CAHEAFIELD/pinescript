@@ -15,8 +15,8 @@ import mihakralj/trends_FIR/1 as fir
 | Function | Description | Complexity | Key Feature |
 |----------|-------------|------------|-------------|
 | `sma()` | Simple Moving Average | O(1) | Circular buffer, arithmetic mean |
-| `wma()` | Weighted Moving Average | O(n) | Linear declining weights |
-| `dwma()` | Double Weighted MA | O(n) | Two-pass WMA smoothing |
+| `wma()` | Weighted Moving Average | O(1) | Dual running sums, cached denominator |
+| `dwma()` | Double Weighted MA | O(1) | Two inline O(1) WMA passes |
 | `epma()` | Endpoint MA | O(n) | Endpoint emphasis weighting |
 
 ### Triangular & Shaped Moving Averages
@@ -42,7 +42,7 @@ import mihakralj/trends_FIR/1 as fir
 
 | Function | Description | Complexity | Key Feature |
 |----------|-------------|------------|-------------|
-| `hma()` | Hull MA | O(n) | Lag reduction composite |
+| `hma()` | Hull MA | O(1) | Three O(1) WMA calculations, lag reduction |
 | `hwma()` | Holt-Winters MA | O(1) | Triple exponential with velocity/acceleration |
 | `lsma()` | Least Squares MA | O(n) | Linear regression fit |
 | `sgma()` | Savitzky-Golay MA | O(n) | Polynomial fitting, preserves peaks |

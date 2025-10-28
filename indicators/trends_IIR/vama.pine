@@ -37,12 +37,14 @@ vama(series float source, simple int base_length, simple int short_atr_period=10
     float long_atr = na
     if not na(trueRange)
         float alpha_short = 1.0 / float(short_atr_period)
+        float beta_short = 1.0 - alpha_short
         raw_rma_short := (raw_rma_short * (short_atr_period - 1) + trueRange) / short_atr_period
-        e_short := (1.0 - alpha_short) * e_short
+        e_short := beta_short * e_short
         short_atr := e_short > EPSILON ? raw_rma_short / (1.0 - e_short) : raw_rma_short
         float alpha_long = 1.0 / float(long_atr_period)
+        float beta_long = 1.0 - alpha_long
         raw_rma_long := (raw_rma_long * (long_atr_period - 1) + trueRange) / long_atr_period
-        e_long := (1.0 - alpha_long) * e_long
+        e_long := beta_long * e_long
         long_atr := e_long > EPSILON ? raw_rma_long / (1.0 - e_long) : raw_rma_long
     float volatility_ratio = not na(short_atr) and not na(long_atr) and short_atr != 0.0 ? long_atr / short_atr : 1.0
     float calc_length = base_length * volatility_ratio

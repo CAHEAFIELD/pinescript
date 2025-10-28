@@ -45,8 +45,9 @@ yzvama(series float source, simple int yzv_short_period=3, simple int yzv_long_p
     float yzv_short = na
     if not na(s_sq_daily_short)
         float rma_alpha_short = 1.0 / float(yzv_short_period)
+        float rma_beta_short = 1.0 - rma_alpha_short
         raw_rma_short := (raw_rma_short * (yzv_short_period - 1) + s_sq_daily_short) / yzv_short_period
-        e_comp_short := (1.0 - rma_alpha_short) * e_comp_short
+        e_comp_short := rma_beta_short * e_comp_short
         float smoothed_s_sq_short = e_comp_short > EPSILON ? raw_rma_short / (1.0 - e_comp_short) : raw_rma_short
         yzv_short := math.sqrt(smoothed_s_sq_short)
     float ratio_N_long = yzv_long_period <= 1 ? 1.0 : (float(yzv_long_period) + 1.0) / (float(yzv_long_period) - 1.0)
@@ -57,8 +58,9 @@ yzvama(series float source, simple int yzv_short_period=3, simple int yzv_long_p
     float yzv_long = na
     if not na(s_sq_daily_long)
         float rma_alpha_long = 1.0 / float(yzv_long_period)
+        float rma_beta_long = 1.0 - rma_alpha_long
         raw_rma_long := (raw_rma_long * (yzv_long_period - 1) + s_sq_daily_long) / yzv_long_period
-        e_comp_long := (1.0 - rma_alpha_long) * e_comp_long
+        e_comp_long := rma_beta_long * e_comp_long
         float smoothed_s_sq_long = e_comp_long > EPSILON ? raw_rma_long / (1.0 - e_comp_long) : raw_rma_long
         yzv_long := math.sqrt(smoothed_s_sq_long)
     var array<float> yzv_buffer = array.new_float(percentile_lookback, na)
