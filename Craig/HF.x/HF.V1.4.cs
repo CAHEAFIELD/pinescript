@@ -189,7 +189,7 @@ namespace CAHEAFIELD.HF
         // ── Outputs ──────────────────────────────────────────────────────────
 
         /// <summary>Composite score normalised to [-1, +1].  Positive = bullish, negative = bearish.</summary>
-        [Output("Combined Score", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2, IsHidden = true)]
+        [Output("Combined Score", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2)]
         public IndicatorDataSeries CombinedScore { get; set; }
 
         /// <summary>Absolute confidence in [0, 1].  Multiply by 100 for percentage.</summary>
@@ -264,7 +264,7 @@ namespace CAHEAFIELD.HF
             // EMA overlay series (optional)
             if (ShowEmaOverlay)
             {
-                var ema = Indicators.ExponentialMovingAverage(Bars.ClosePrices, EmaPeriod).Result[index];
+                var ema = Indicators.ExponentialMovingAverage(Bars.ClosePrices, EmaFastLen).Result[index];
                 EmaOverlay[index] = ema;
             }
             else
@@ -537,10 +537,10 @@ namespace CAHEAFIELD.HF
             var slCol = ParseHex(SlColorHex, 220);
 
             // Horizontal lines (same names update in-place)
-            var l1 = Chart.DrawHorizontalLine("EAHF_TP1", tp1, tpCol, TpLineWidth, LineStyle.DotsVerySparse);
+            var l1 = Chart.DrawHorizontalLine("EAHF_TP1", tp1, tpCol, TpLineWidth, LineStyle.DotsVeryRare);
             var l2 = Chart.DrawHorizontalLine("EAHF_TP2", tp2, tpCol, TpLineWidth, LineStyle.DotsRare);
             var l3 = Chart.DrawHorizontalLine("EAHF_TP3", tp3, tpCol, TpLineWidth, LineStyle.Solid);
-            var ls = Chart.DrawHorizontalLine("EAHF_SL",  sl,  slCol, SlLineWidth, LineStyle.DotsVerySparse);
+            var ls = Chart.DrawHorizontalLine("EAHF_SL",  sl,  slCol, SlLineWidth, LineStyle.DotsVeryRare);
 
             l1.IsInteractive = false; l2.IsInteractive = false; l3.IsInteractive = false; ls.IsInteractive = false;
 
@@ -581,100 +581,6 @@ private double GetPipSize()
             => Math.Clamp(value, min, max);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // OPTIONAL PANELS (separate indicators)
-    // NOTE: cTrader indicators cannot render to multiple panels from one class.
-    // Add these as separate indicators to get RSI/Stoch/MACD in their own panels.
-    // ─────────────────────────────────────────────────────────────────────
-
-    [Indicator("EA.HF RSI v1.4", IsOverlay = false, AutoRescale = true, AccessRights = AccessRights.None)]
-    public class EAHF_Rsi_v14 : Indicator
-    {
-        [Parameter("RSI Period", DefaultValue = 14, MinValue = 1)]
-        public int Period { get; set; }
-
-        [Output("RSI", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2)]
-        public IndicatorDataSeries Result { get; set; }
-
-        private RelativeStrengthIndex _rsi;
-
-        protected override void OnStart()
-        {
-            _rsi = Indicators.RelativeStrengthIndex(Bars.ClosePrices, Period);
-        }
-
-        public override void Calculate(int index)
-        {
-            Result[index] = _rsi.Result[index];
-        }
-    }
-
-    [Indicator("EA.HF Stochastic v1.4", IsOverlay = false, AutoRescale = true, AccessRights = AccessRights.None)]
-    public class EAHF_Stoch_v14 : Indicator
-    {
-        [Parameter("%K Period", DefaultValue = 14, MinValue = 1)]
-        public int KPeriod { get; set; }
-
-        [Parameter("%D Period", DefaultValue = 3, MinValue = 1)]
-        public int DPeriod { get; set; }
-
-        [Parameter("Slowing", DefaultValue = 3, MinValue = 1)]
-        public int Slowing { get; set; }
-
-        [Output("%K", LineColor = "LimeGreen", PlotType = PlotType.Line, Thickness = 2)]
-        public IndicatorDataSeries K { get; set; }
-
-        [Output("%D", LineColor = "Orange", PlotType = PlotType.Line, Thickness = 2)]
-        public IndicatorDataSeries D { get; set; }
-
-        private StochasticOscillator _stoch;
-
-        protected override void OnStart()
-        {
-            _stoch = Indicators.StochasticOscillator(KPeriod, DPeriod, Slowing, MovingAverageType.Simple);
-        }
-
-        public override void Calculate(int index)
-        {
-            K[index] = _stoch.PercentK[index];
-            D[index] = _stoch.PercentD[index];
-        }
-    }
-
-    [Indicator("EA.HF MACD v1.4", IsOverlay = false, AutoRescale = true, AccessRights = AccessRights.None)]
-    public class EAHF_Macd_v14 : Indicator
-    {
-        [Parameter("Fast", DefaultValue = 12, MinValue = 1)]
-        public int Fast { get; set; }
-
-        [Parameter("Slow", DefaultValue = 26, MinValue = 1)]
-        public int Slow { get; set; }
-
-        [Parameter("Signal", DefaultValue = 9, MinValue = 1)]
-        public int Signal { get; set; }
-
-        [Output("MACD", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2)]
-        public IndicatorDataSeries Macd { get; set; }
-
-        [Output("Signal", LineColor = "Orange", PlotType = PlotType.Line, Thickness = 2)]
-        public IndicatorDataSeries Sig { get; set; }
-
-        [Output("Histogram", LineColor = "Gray", PlotType = PlotType.Histogram, Thickness = 2)]
-        public IndicatorDataSeries Hist { get; set; }
-
-        private MacdCrossOver _macd;
-
-        protected override void OnStart()
-        {
-            _macd = Indicators.MacdCrossOver(Fast, Slow, Signal);
-        }
-
-        public override void Calculate(int index)
-        {
-            Macd[index] = _macd.MACD[index];
-            Sig[index]  = _macd.Signal[index];
-            Hist[index] = _macd.Histogram[index];
-        }
-    }
+    // Optional panel indicators (EA.HF RSI/Stochastic/MACD v1.4) are in HF.V1.4.Panels.cs.
 
 }
