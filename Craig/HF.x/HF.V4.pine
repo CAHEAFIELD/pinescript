@@ -295,7 +295,7 @@ float pip_sz = syminfo.mintick
 //@function Format a signed pip/tick distance with compact suffix.
 f_pdist(float v) =>
     string sgn = v >= 0.0 ? "+" : "-"
-    sgn + str.tostring(math.abs(v), "#.0") + "tk"
+    sgn + str.tostring(math.round(math.abs(v))) + "tk"
 
 //@function Convert a raw score to display values.
 //@param sc  Raw score in [-1.0, +1.0]
