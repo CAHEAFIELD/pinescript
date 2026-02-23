@@ -751,7 +751,7 @@ if i_telemetry and barstate.isconfirmed
 //    Same as Test C, but with i_neutral_zone = true.
 //    → COMB abs score < i_conf_min/100 → is_neutral = true
 //    → show_levels = false even with TP Preview Mode ON
-//    → Data Window: dbg_tp_visible = 0 (neutral, suppressed)
+//    → Data Window: t.tp_visible = 0 (neutral, suppressed)
 //
 //  These test regimes confirm the indicator correctly:
 //    ✓ Identifies and amplifies directional moves
