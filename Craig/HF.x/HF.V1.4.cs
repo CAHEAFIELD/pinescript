@@ -421,8 +421,8 @@ namespace CAHEAFIELD.HF
                 double tpPrev = (Bars.HighPrices[idx - 1] + Bars.LowPrices[idx - 1] + Bars.ClosePrices[idx - 1]) / 3.0;
                 double flow   = tp * Bars.TickVolumes[idx];
 
-                if (tp > tpPrev) posFlow += flow;
-                else             negFlow += flow;
+                if      (tp > tpPrev) posFlow += flow;
+                else if (tp < tpPrev) negFlow += flow;
             }
 
             double total = posFlow + negFlow;
