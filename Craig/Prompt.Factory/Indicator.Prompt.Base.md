@@ -456,7 +456,7 @@ Follow section 4 PR 5 requirements.
 
 ### Special instructions accumulated from reviews
 
-- **Pine Script v6: line continuations are not allowed.** Never rely on implicit newline continuation. Keep ternaries/operators valid at end-of-line by either writing the full expression on one logical line, or wrapping the entire expression in parentheses so continuation is unambiguous. Prefer parentheses-wrapped expressions for all multi-line arithmetic and ternary readability.
+- **Pine Script v6: implicit line continuations are not allowed.** Never rely on dangling operators or ternary parts carried across a newline. Keep ternaries/operators valid at end-of-line by either writing the full expression on one logical line, or wrapping the entire expression in parentheses so multi-line continuation is syntactically unambiguous. Prefer parentheses-wrapped expressions for all multi-line arithmetic and ternary readability.
 - **`ta.mfi` in Pine v6 takes exactly 2 arguments:** `ta.mfi(source, length)`. Do not pass `volume` as a separate argument; the built-in uses the chart's volume series internally.
 - **`math.round()` in Pine v6 is single-argument.** To round to N decimal places use scaling: `math.round(x * 10^N) / 10^N`.
 - **Series functions (`ta.atr`, `ta.rsi`, etc.) must be called at stable (top-level) scope.** Calling them inside conditional blocks (`if barstate.islast`, etc.) triggers the "recommended to extract call from this scope" warning and may produce incorrect results. Compute the series value unconditionally at the top level, store it in a variable, and reference the variable inside conditional blocks.
