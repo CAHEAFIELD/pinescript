@@ -123,7 +123,7 @@ i_pip_mode     = input.string("Auto",           "Pip Size Mode",
                               group="TP / SL Display",
                               tooltip="Auto: infer pip size from symbol type (forex = mintick×10, others = mintick). Override: use the value below.")
 i_pip_override = input.float(0.0001,            "Pip Size Override",
-                              minval=0.0000001, step=syminfo.mintick,
+                              minval=0.0000001, step=0.0000001,
                               group="TP / SL Display",
                               tooltip="Only used when Pip Size Mode = Override. Set to your broker's pip size for this instrument.")
 
@@ -324,7 +324,8 @@ float atr_val = ta.atr(i_atr_len)
 //            non-forex → mintick (displayed as ticks)
 // Override mode: user-supplied pip_size applied directly.
 bool   _is_forex = syminfo.type == "forex"
-float  _auto_pip = _is_forex ? syminfo.mintick * 10.0 : syminfo.mintick
+float  _mt       = syminfo.mintick
+float  _auto_pip = _is_forex ? ((_mt < 0.0001 or _mt == 0.001) ? _mt * 10.0 : _mt) : _mt
 float  pip_sz    = i_pip_mode == "Override" ? i_pip_override : _auto_pip
 string pip_sfx   = (i_pip_mode == "Override" or _is_forex) ? "p" : "tk"
 
