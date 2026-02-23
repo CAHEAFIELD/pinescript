@@ -58,7 +58,7 @@
 //  • Overlay:   ATR-based TP1/TP2/TP3/SL levels are computed and printed to the
 //               telemetry log but NOT drawn on the price chart (this indicator
 //               runs as a non-overlay oscillator).  To draw price lines, split
-//               into a second IsOverlay=true indicator or a cBot.
+//               into a second IsOverlay    = true indicator or a cBot.
 //  • Alerts:    Pine's alertcondition() has no direct equivalent; wire
 //               ExecuteMarketOrder or Chart.DrawStaticText in a cBot instead.
 //  • Repainting: Calculate() is called for each closed bar; the last bar (IsLastBar)
@@ -81,6 +81,35 @@ namespace CAHEAFIELD.HF
         AccessRights = AccessRights.None)]
     public class HFScalperV14 : Indicator
     {
+        // ─────────────────────────────────────────────────────────────────────
+        // OVERLAY VISUALS (Priority: TP/SL first-class on main chart)
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Parameter("Show TP/SL Levels", DefaultValue = true, Group = "Display")]
+        public bool ShowTpSlLevels { get; set; }
+
+        [Parameter("TP/SL Preview Mode (Ignore Threshold)", DefaultValue = false, Group = "TP/SL Display")]
+        public bool TpSlPreviewIgnoreThreshold { get; set; }
+
+        [Parameter("TP Line Width", DefaultValue = 3, MinValue = 1, MaxValue = 5, Group = "TP/SL Display")]
+        public int TpLineWidth { get; set; }
+
+        [Parameter("SL Line Width", DefaultValue = 3, MinValue = 1, MaxValue = 5, Group = "TP/SL Display")]
+        public int SlLineWidth { get; set; }
+
+        [Parameter("TP Color", DefaultValue = "00C853", Group = "TP/SL Display")]
+        public string TpColorHex { get; set; }
+
+        [Parameter("SL Color", DefaultValue = "FF3D3D", Group = "TP/SL Display")]
+        public string SlColorHex { get; set; }
+
+        [Parameter("Label Offset (pips)", DefaultValue = 2.0, MinValue = 0, Group = "TP/SL Display")]
+        public double TpSlLabelOffsetPips { get; set; }
+
+        [Parameter("Show EMA (Overlay)", DefaultValue = true, Group = "Overlay Indicators")]
+        public bool ShowEmaOverlay { get; set; }
+
+
         // ── RSI (1) ──────────────────────────────────────────────────────────
         [Parameter("Length", DefaultValue = 14, MinValue = 2, MaxValue = 500, Group = "RSI (1)")]
         public int RsiLength { get; set; }
@@ -160,14 +189,18 @@ namespace CAHEAFIELD.HF
         // ── Outputs ──────────────────────────────────────────────────────────
 
         /// <summary>Composite score normalised to [-1, +1].  Positive = bullish, negative = bearish.</summary>
-        [Output("Combined Score", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2)]
+        [Output("Combined Score", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2, IsHidden = true)]
         public IndicatorDataSeries CombinedScore { get; set; }
 
         /// <summary>Absolute confidence in [0, 1].  Multiply by 100 for percentage.</summary>
         [Output("Confidence (0–1)", LineColor = "Orange", PlotType = PlotType.Line, Thickness = 1)]
         public IndicatorDataSeries Confidence { get; set; }
 
-        /// <summary>Positive signal-threshold level (constant horizontal line).</summary>
+        
+
+        [Output("EMA Overlay", LineColor = "Aqua", PlotType = PlotType.Line, Thickness = 1)]
+        public IndicatorDataSeries EmaOverlay { get; set; }
+/// <summary>Positive signal-threshold level (constant horizontal line).</summary>
         [Output("Threshold +", LineColor = "Green", PlotType = PlotType.Line, LineStyle = LineStyle.Lines, Thickness = 1)]
         public IndicatorDataSeries ThresholdPos { get; set; }
 
@@ -228,6 +261,17 @@ namespace CAHEAFIELD.HF
         // ════════════════════════════════════════════════════════════════════
         public override void Calculate(int index)
         {
+            // EMA overlay series (optional)
+            if (ShowEmaOverlay)
+            {
+                var ema = Indicators.ExponentialMovingAverage(Bars.ClosePrices, EmaPeriod).Result[index];
+                EmaOverlay[index] = ema;
+            }
+            else
+            {
+                EmaOverlay[index] = double.NaN;
+            }
+
             double threshNorm = SignalThresholdPct / 100.0;
             ThresholdPos[index] =  threshNorm;
             ThresholdNeg[index] = -threshNorm;
@@ -450,7 +494,77 @@ namespace CAHEAFIELD.HF
         //  When UseCustomPipSize = true the user-supplied override is used directly,
         //  matching Pine's "Override" pip mode.
         // ════════════════════════════════════════════════════════════════════
-        private double GetPipSize()
+        
+        private static Color ParseHex(string hex, byte alpha = 255)
+        {
+            if (string.IsNullOrWhiteSpace(hex)) return Color.White;
+            hex = hex.Trim().TrimStart('#');
+            if (hex.Length == 6)
+            {
+                var r = Convert.ToByte(hex.Substring(0, 2), 16);
+                var g = Convert.ToByte(hex.Substring(2, 2), 16);
+                var b = Convert.ToByte(hex.Substring(4, 2), 16);
+                return Color.FromArgb(alpha, r, g, b);
+            }
+            return Color.White;
+        }
+
+        private void DrawTpSlOverlay(int index, double close, double combined, double confPct, double tp1Pips, double tp2Pips, double tp3Pips, double slPips)
+        {
+            // Gate: TP/SL are first-class visuals; preview mode allows showing even below threshold.
+            if (!ShowTpSlLevels)
+            {
+                ClearTpSlOverlay();
+                return;
+            }
+
+            bool meets = confPct >= SignalThresholdPct;
+            bool show  = TpSlPreviewIgnoreThreshold ? true : meets;
+
+            if (!show)
+            {
+                ClearTpSlOverlay();
+                return;
+            }
+
+            // Convert signed pips to absolute price levels.
+            double tp1 = close + PipsToPrice(tp1Pips);
+            double tp2 = close + PipsToPrice(tp2Pips);
+            double tp3 = close + PipsToPrice(tp3Pips);
+            double sl  = close + PipsToPrice(slPips);
+
+            var tpCol = ParseHex(TpColorHex, 220);
+            var slCol = ParseHex(SlColorHex, 220);
+
+            // Horizontal lines (same names update in-place)
+            var l1 = Chart.DrawHorizontalLine("EAHF_TP1", tp1, tpCol, TpLineWidth, LineStyle.DotsVerySparse);
+            var l2 = Chart.DrawHorizontalLine("EAHF_TP2", tp2, tpCol, TpLineWidth, LineStyle.DotsRare);
+            var l3 = Chart.DrawHorizontalLine("EAHF_TP3", tp3, tpCol, TpLineWidth, LineStyle.Solid);
+            var ls = Chart.DrawHorizontalLine("EAHF_SL",  sl,  slCol, SlLineWidth, LineStyle.DotsVerySparse);
+
+            l1.IsInteractive = false; l2.IsInteractive = false; l3.IsInteractive = false; ls.IsInteractive = false;
+
+            // Labels slightly above each line (pips)
+            double off = TpSlLabelOffsetPips * GetPipSize();
+            Chart.DrawText("EAHF_TP1_L", string.Format("TP1  {0}", tp1.ToString("F5")), index, tp1 + off, tpCol).IsInteractive = false;
+            Chart.DrawText("EAHF_TP2_L", string.Format("TP2  {0}", tp2.ToString("F5")), index, tp2 + off, tpCol).IsInteractive = false;
+            Chart.DrawText("EAHF_TP3_L", string.Format("TP3  {0}", tp3.ToString("F5")), index, tp3 + off, tpCol).IsInteractive = false;
+            Chart.DrawText("EAHF_SL_L",  string.Format("SL   {0}", sl.ToString("F5")),  index, sl  + off, slCol).IsInteractive = false;
+        }
+
+        private void ClearTpSlOverlay()
+        {
+            Chart.RemoveObject("EAHF_TP1");
+            Chart.RemoveObject("EAHF_TP2");
+            Chart.RemoveObject("EAHF_TP3");
+            Chart.RemoveObject("EAHF_SL");
+            Chart.RemoveObject("EAHF_TP1_L");
+            Chart.RemoveObject("EAHF_TP2_L");
+            Chart.RemoveObject("EAHF_TP3_L");
+            Chart.RemoveObject("EAHF_SL_L");
+        }
+
+private double GetPipSize()
         {
             if (UseCustomPipSize && PipSizeOverride > 0.0)
                 return PipSizeOverride;
@@ -466,4 +580,101 @@ namespace CAHEAFIELD.HF
         private static double Clamp(double value, double min, double max)
             => Math.Clamp(value, min, max);
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // OPTIONAL PANELS (separate indicators)
+    // NOTE: cTrader indicators cannot render to multiple panels from one class.
+    // Add these as separate indicators to get RSI/Stoch/MACD in their own panels.
+    // ─────────────────────────────────────────────────────────────────────
+
+    [Indicator("EA.HF RSI v1.4", IsOverlay = false, AutoRescale = true, AccessRights = AccessRights.None)]
+    public class EAHF_Rsi_v14 : Indicator
+    {
+        [Parameter("RSI Period", DefaultValue = 14, MinValue = 1)]
+        public int Period { get; set; }
+
+        [Output("RSI", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2)]
+        public IndicatorDataSeries Result { get; set; }
+
+        private RelativeStrengthIndex _rsi;
+
+        protected override void OnStart()
+        {
+            _rsi = Indicators.RelativeStrengthIndex(Bars.ClosePrices, Period);
+        }
+
+        public override void Calculate(int index)
+        {
+            Result[index] = _rsi.Result[index];
+        }
+    }
+
+    [Indicator("EA.HF Stochastic v1.4", IsOverlay = false, AutoRescale = true, AccessRights = AccessRights.None)]
+    public class EAHF_Stoch_v14 : Indicator
+    {
+        [Parameter("%K Period", DefaultValue = 14, MinValue = 1)]
+        public int KPeriod { get; set; }
+
+        [Parameter("%D Period", DefaultValue = 3, MinValue = 1)]
+        public int DPeriod { get; set; }
+
+        [Parameter("Slowing", DefaultValue = 3, MinValue = 1)]
+        public int Slowing { get; set; }
+
+        [Output("%K", LineColor = "LimeGreen", PlotType = PlotType.Line, Thickness = 2)]
+        public IndicatorDataSeries K { get; set; }
+
+        [Output("%D", LineColor = "Orange", PlotType = PlotType.Line, Thickness = 2)]
+        public IndicatorDataSeries D { get; set; }
+
+        private StochasticOscillator _stoch;
+
+        protected override void OnStart()
+        {
+            _stoch = Indicators.StochasticOscillator(KPeriod, DPeriod, Slowing, MovingAverageType.Simple);
+        }
+
+        public override void Calculate(int index)
+        {
+            K[index] = _stoch.PercentK[index];
+            D[index] = _stoch.PercentD[index];
+        }
+    }
+
+    [Indicator("EA.HF MACD v1.4", IsOverlay = false, AutoRescale = true, AccessRights = AccessRights.None)]
+    public class EAHF_Macd_v14 : Indicator
+    {
+        [Parameter("Fast", DefaultValue = 12, MinValue = 1)]
+        public int Fast { get; set; }
+
+        [Parameter("Slow", DefaultValue = 26, MinValue = 1)]
+        public int Slow { get; set; }
+
+        [Parameter("Signal", DefaultValue = 9, MinValue = 1)]
+        public int Signal { get; set; }
+
+        [Output("MACD", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2)]
+        public IndicatorDataSeries Macd { get; set; }
+
+        [Output("Signal", LineColor = "Orange", PlotType = PlotType.Line, Thickness = 2)]
+        public IndicatorDataSeries Sig { get; set; }
+
+        [Output("Histogram", LineColor = "Gray", PlotType = PlotType.Histogram, Thickness = 2)]
+        public IndicatorDataSeries Hist { get; set; }
+
+        private MacdCrossOver _macd;
+
+        protected override void OnStart()
+        {
+            _macd = Indicators.MacdCrossOver(Fast, Slow, Signal);
+        }
+
+        public override void Calculate(int index)
+        {
+            Macd[index] = _macd.MACD[index];
+            Sig[index]  = _macd.Signal[index];
+            Hist[index] = _macd.Histogram[index];
+        }
+    }
+
 }
