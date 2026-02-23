@@ -1,7 +1,7 @@
 // The MIT License (MIT)
 // © CAHEAFIELD
 //
-// HF Scalper V1 — Multi-Timeframe High-Frequency Scalping Indicator
+// HF Scalper V1.0 — Multi-Timeframe High-Frequency Scalping Indicator
 // Designed for 1m – 15m charts
 //
 // ┌─ CONFLUENCED INDICATORS (run in background) ───────────────────────┐
@@ -23,7 +23,7 @@
 //   Flat/noise series → score stays near  0    (low confidence, no TP shown)
 
 //@version=6
-indicator("EA.HF Scalper V1", "EA.HF.V1", overlay=true, max_lines_count=50, max_labels_count=50)
+indicator("EA.HF Scalper V1.0", "EA.HF.V1.0", overlay=true, max_lines_count=50, max_labels_count=50)
 
 // ══════════════════════════════════════════════════════════════════════
 //  INPUTS
