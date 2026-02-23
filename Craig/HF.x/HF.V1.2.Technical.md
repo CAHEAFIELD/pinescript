@@ -795,10 +795,21 @@ namespace cAlgo
             return Clamp(raw / 6.0, -1, 1);
         }
 
+        // Legacy overload using default Stoch RSI parameters (RSI=14, StochLen=14, KSmooth=3)
         private double ComputeStochRsiScore(MarketSeries series)
         {
-            int stochLen = 14, kSmooth = 3;
-            var rsiInd = Indicators.RelativeStrengthIndex(series.Close, 14);
+            // Preserve existing default behaviour
+            const int defaultRsiPeriod = 14;
+            const int defaultStochLen  = 14;
+            const int defaultKSmooth   = 3;
+
+            return ComputeStochRsiScore(series, defaultRsiPeriod, defaultStochLen, defaultKSmooth);
+        }
+
+        // Parameterized overload that allows external configuration to drive Stoch RSI settings
+        private double ComputeStochRsiScore(MarketSeries series, int rsiPeriod, int stochLen, int kSmooth)
+        {
+            var rsiInd = Indicators.RelativeStrengthIndex(series.Close, rsiPeriod);
             int count  = rsiInd.Result.Count;
             // Need enough data to compute a stochLen-window for each of the last kSmooth bars
             if (count < stochLen + kSmooth - 1) return 0;
