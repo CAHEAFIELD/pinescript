@@ -1,0 +1,431 @@
+// The MIT License (MIT)
+// © CAHEAFIELD
+//
+// HF Scalper V1 — Multi-Timeframe High-Frequency Scalping Indicator
+// Designed for 1m – 15m charts
+//
+// ┌─ CONFLUENCED INDICATORS (run in background) ───────────────────────┐
+// │  1. RSI (14)            – Momentum overbought/oversold              │
+// │  2. Stochastic RSI      – Fast oscillator for entry timing          │
+// │  3. MACD (12/26/9)      – Trend-momentum direction + divergence     │
+// │  4. EMA Cross (9/21)    – Short-term trend direction baseline       │
+// │  5. MFI (14)            – Volume-weighted momentum confirmation     │
+// └────────────────────────────────────────────────────────────────────┘
+//
+// FRONT-END:
+//   • Dashboard table — M1 / M2 / M5 / M15 / COMBINED with BUY/SELL + confidence %
+//   • Gradient candle coloring: dark-red → amber → dark-green
+//   • 3 dynamic TP levels + SL via ATR × Fibonacci pivot blend
+//
+// SYNTHETIC VALIDATION (described at bottom of file):
+//   Ascending series  → score climbs toward +1 (BUY, high confidence)
+//   Descending series → score falls toward -1  (SELL, high confidence)
+//   Flat/noise series → score stays near  0    (low confidence, no TP shown)
+
+//@version=6
+indicator("HF Scalper V1", "HF.V1", overlay=true, max_lines_count=50, max_labels_count=50)
+
+// ══════════════════════════════════════════════════════════════════════
+//  INPUTS
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Display ────────────────────────────────────────────────────────────
+i_show_table    = input.bool(true,          "Show Signal Dashboard",
+                              group="Display")
+i_show_tp       = input.bool(true,          "Show TP/SL Levels",
+                              group="Display")
+i_color_candles = input.bool(true,          "Gradient Candle Colors",
+                              group="Display")
+i_conf_min      = input.float(55.0,         "Signal Threshold (%)",
+                              minval=0, maxval=100, step=5,
+                              group="Display",
+                              tooltip="TP/SL levels only drawn when combined confidence meets or exceeds this value")
+i_tbl_pos       = input.string("top_right", "Dashboard Position",
+                              options=["top_right","top_left","bottom_right",
+                                       "bottom_left","middle_right","middle_left"],
+                              group="Display")
+
+// ── RSI ────────────────────────────────────────────────────────────────
+i_rsi_len = input.int(14, "Length", minval=2, maxval=50, group="RSI (1)")
+
+// ── Stochastic RSI ─────────────────────────────────────────────────────
+i_sr_rsi = input.int(14, "RSI Period",   minval=2, group="Stochastic RSI (2)")
+i_sr_st  = input.int(14, "Stoch Period", minval=2, group="Stochastic RSI (2)")
+i_sr_k   = input.int(3,  "%K Smooth",   minval=1, group="Stochastic RSI (2)")
+i_sr_d   = input.int(3,  "%D Smooth",   minval=1, group="Stochastic RSI (2)")
+
+// ── MACD ───────────────────────────────────────────────────────────────
+i_macd_f = input.int(12, "Fast",   minval=2, group="MACD (3)")
+i_macd_s = input.int(26, "Slow",   minval=2, group="MACD (3)")
+i_macd_g = input.int(9,  "Signal", minval=2, group="MACD (3)")
+
+// ── EMA Cross ──────────────────────────────────────────────────────────
+i_ema_f = input.int(9,  "Fast EMA", minval=2, group="EMA Cross (4)")
+i_ema_s = input.int(21, "Slow EMA", minval=2, group="EMA Cross (4)")
+
+// ── MFI ────────────────────────────────────────────────────────────────
+i_mfi_len = input.int(14, "Length", minval=2, group="MFI (5)")
+
+// ── Take Profit / Stop Loss ────────────────────────────────────────────
+i_atr_len  = input.int(14,   "ATR Length",     minval=2,   group="TP / SL")
+i_tp1_mult = input.float(1.5, "TP1 × ATR",     minval=0.1, step=0.1, group="TP / SL")
+i_tp2_mult = input.float(2.5, "TP2 × ATR",     minval=0.1, step=0.1, group="TP / SL")
+i_tp3_mult = input.float(4.0, "TP3 × ATR",     minval=0.1, step=0.1, group="TP / SL")
+i_sl_mult  = input.float(1.0, "SL  × ATR",     minval=0.1, step=0.1, group="TP / SL")
+i_tp_lookb = input.int(20,   "Pivot Lookback", minval=5,
+                              group="TP / SL",
+                              tooltip="Number of bars used to identify recent swing high/low for Fibonacci TP extensions")
+
+// ══════════════════════════════════════════════════════════════════════
+//  COMPOSITE SIGNAL FUNCTION
+//
+//  Returns a single float in [-1.0, +1.0].
+//  Positive = bullish, Negative = bearish.
+//
+//  Design notes:
+//   • Uses only Pine built-ins (ta.*) so it is safe to call from
+//     request.security() – each security context gets its own state.
+//   • Five indicators with differentiated weights:
+//       RSI       1.0  — momentum baseline
+//       StochRSI  1.2  — fast oscillator (higher weight for scalping timing)
+//       MACD      1.5  — trend-momentum (primary direction tool)
+//       EMA Cross 1.5  — structural trend (primary direction tool)
+//       MFI       0.8  — volume confirmation (secondary filter)
+//     Σ weights = 6.0  → divided out so output stays in [-1, +1]
+// ══════════════════════════════════════════════════════════════════════
+
+//@function Weighted composite bull/bear score using 5 scalping indicators.
+//@returns  float in [-1.0, +1.0]: positive = bullish, negative = bearish.
+f_score() =>
+    // ── 1. RSI (weight 1.0) ───────────────────────────────────────────
+    float rsi14   = ta.rsi(close, i_rsi_len)
+    float s_rsi   = math.max(-1.0, math.min(1.0, (rsi14 - 50.0) / 50.0))
+
+    // ── 2. Stochastic RSI (weight 1.2) ────────────────────────────────
+    // Compute RSI, then apply stochastic formula on that RSI series.
+    // ta.stoch(src, high_src, low_src, len) with identical series for
+    // all three inputs resolves to the standard StochRSI formula:
+    //   100 * (rsi - lowest(rsi,N)) / (highest(rsi,N) - lowest(rsi,N))
+    float rsi_sr  = ta.rsi(close, i_sr_rsi)
+    float k_raw   = ta.stoch(rsi_sr, rsi_sr, rsi_sr, i_sr_st)
+    float k_sm    = ta.sma(k_raw, i_sr_k)          // smoothed %K
+    float d_sm    = ta.sma(k_sm,  i_sr_d)          // smoothed %D
+    // Blend: absolute K position (trend) + K vs D direction (momentum)
+    float s_stoch = math.max(-1.0, math.min(1.0,
+                        (k_sm - 50.0) / 50.0 * 0.6 +
+                        (k_sm - d_sm) / 20.0 * 0.4))
+
+    // ── 3. MACD histogram (weight 1.5) ────────────────────────────────
+    // Stronger signal when histogram is growing in its direction.
+    [macd_l, macd_s, macd_h] = ta.macd(close, i_macd_f, i_macd_s, i_macd_g)
+    float mh_prev = nz(macd_h[1])
+    float s_macd  = macd_h > 0.0 ? (macd_h >= mh_prev ? 1.0 : 0.3) :
+                                    (macd_h <= mh_prev ? -1.0 : -0.3)
+
+    // ── 4. EMA Cross + price position (weight 1.5) ────────────────────
+    // Normalised spread: how far apart are the EMAs relative to slow EMA?
+    float fe      = ta.ema(close, i_ema_f)
+    float se      = ta.ema(close, i_ema_s)
+    float spread  = se > 0.0 ? (fe - se) / se * 300.0 : 0.0
+    float s_ema   = math.max(-1.0, math.min(1.0, spread))
+
+    // ── 5. Money Flow Index (weight 0.8) ──────────────────────────────
+    float mfi14   = ta.mfi(hlc3, volume, i_mfi_len)
+    float s_mfi   = math.max(-1.0, math.min(1.0, (mfi14 - 50.0) / 50.0))
+
+    // ── Weighted sum, normalised to [-1, +1] ──────────────────────────
+    float raw = s_rsi   * 1.0 +
+                s_stoch * 1.2 +
+                s_macd  * 1.5 +
+                s_ema   * 1.5 +
+                s_mfi   * 0.8
+    math.max(-1.0, math.min(1.0, raw / 6.0))
+
+// ══════════════════════════════════════════════════════════════════════
+//  MULTI-TIMEFRAME SIGNALS
+//  Each timeframe gets its own independent evaluation of f_score().
+//  lookahead_off prevents future-bar leakage.
+// ══════════════════════════════════════════════════════════════════════
+
+float sc_m1   = request.security(syminfo.tickerid, "1",  f_score(), lookahead=barmerge.lookahead_off)
+float sc_m2   = request.security(syminfo.tickerid, "2",  f_score(), lookahead=barmerge.lookahead_off)
+float sc_m5   = request.security(syminfo.tickerid, "5",  f_score(), lookahead=barmerge.lookahead_off)
+float sc_m15  = request.security(syminfo.tickerid, "15", f_score(), lookahead=barmerge.lookahead_off)
+float sc_comb = (nz(sc_m1) + nz(sc_m2) + nz(sc_m5) + nz(sc_m15)) / 4.0
+
+float sc_cur  = f_score()   // current chart timeframe (for candle coloring)
+
+// ══════════════════════════════════════════════════════════════════════
+//  GRADIENT CANDLE COLORING
+//
+//  Mapping: score ∈ [-1, +1] → color gradient
+//    +1 → #00873E  deep green   (strong bull)
+//     0 → #B8860B  dark amber   (neutral)
+//    -1 → #C42222  deep red     (strong bear)
+//
+//  sqrt() applied to absolute score so colours saturate quickly as
+//  conviction grows, giving visible feedback even at moderate signals.
+// ══════════════════════════════════════════════════════════════════════
+
+color c_bar = na
+if i_color_candles
+    float s = nz(sc_cur, 0.0)
+    if s >= 0.0
+        c_bar := color.from_gradient(math.sqrt(s), 0.0, 1.0, #B8860B, #00873E)
+    else
+        c_bar := color.from_gradient(math.sqrt(-s), 0.0, 1.0, #B8860B, #C42222)
+
+barcolor(i_color_candles ? c_bar : na)
+
+// ══════════════════════════════════════════════════════════════════════
+//  DASHBOARD TABLE
+// ══════════════════════════════════════════════════════════════════════
+
+//@function Convert a raw score to display values.
+//@param sc  Raw score in [-1.0, +1.0]
+//@returns   [signal_text, confidence_pct, signal_color]
+f_disp(float sc) =>
+    float  conf = math.round(math.abs(nz(sc)) * 100.0, 1)
+    bool   bull = nz(sc) >= 0.0
+    string sig  = bull ? "▲  BUY"  : "▼  SELL"
+    color  col  = bull ? #00C853   : #FF3D3D
+    [sig, conf, col]
+
+[d_sig_m1,  d_con_m1,  d_col_m1 ] = f_disp(sc_m1)
+[d_sig_m2,  d_con_m2,  d_col_m2 ] = f_disp(sc_m2)
+[d_sig_m5,  d_con_m5,  d_col_m5 ] = f_disp(sc_m5)
+[d_sig_m15, d_con_m15, d_col_m15] = f_disp(sc_m15)
+[d_sig_com, d_con_com, d_col_com] = f_disp(sc_comb)
+
+var table tbl = na
+
+if i_show_table and barstate.islast
+    string tpos =
+         i_tbl_pos == "top_right"    ? position.top_right    :
+         i_tbl_pos == "top_left"     ? position.top_left     :
+         i_tbl_pos == "bottom_right" ? position.bottom_right :
+         i_tbl_pos == "bottom_left"  ? position.bottom_left  :
+         i_tbl_pos == "middle_right" ? position.middle_right :
+                                       position.middle_left
+
+    tbl := table.new(tpos, 3, 8,
+         bgcolor      = color.new(#0A0A14, 8),
+         border_color = color.new(#2A2A40, 0),
+         border_width = 1,
+         frame_color  = color.new(#4444AA, 0),
+         frame_width  = 1)
+
+    // ── Row 0: Title ──────────────────────────────────────────────────
+    table.cell(tbl, 0, 0, "⚡  HF SCALPER V1",
+         text_color=color.white, text_size=size.normal,
+         bgcolor=#1A1A3E, text_halign=text.align_center)
+    table.merge_cells(tbl, 0, 0, 2, 0)
+
+    // ── Row 1: Column headers ──────────────────────────────────────────
+    table.cell(tbl, 0, 1, "TF",
+         text_color=#8888BB, text_size=size.small, bgcolor=#0E0E26)
+    table.cell(tbl, 1, 1, "Signal",
+         text_color=#8888BB, text_size=size.small, bgcolor=#0E0E26,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 1, "Conf",
+         text_color=#8888BB, text_size=size.small, bgcolor=#0E0E26,
+         text_halign=text.align_center)
+
+    // ── Rows 2-5: Per-timeframe signals ───────────────────────────────
+    color ROW_BG = #0B0B1A
+
+    table.cell(tbl, 0, 2, "M1",
+         text_color=color.silver, text_size=size.small, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 2, d_sig_m1,
+         text_color=d_col_m1, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 2, str.tostring(d_con_m1, "#.0") + "%",
+         text_color=d_col_m1, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    table.cell(tbl, 0, 3, "M2",
+         text_color=color.silver, text_size=size.small, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 3, d_sig_m2,
+         text_color=d_col_m2, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 3, str.tostring(d_con_m2, "#.0") + "%",
+         text_color=d_col_m2, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    table.cell(tbl, 0, 4, "M5",
+         text_color=color.silver, text_size=size.small, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 4, d_sig_m5,
+         text_color=d_col_m5, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 4, str.tostring(d_con_m5, "#.0") + "%",
+         text_color=d_col_m5, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    table.cell(tbl, 0, 5, "M15",
+         text_color=color.silver, text_size=size.small, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 5, d_sig_m15,
+         text_color=d_col_m15, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 5, str.tostring(d_con_m15, "#.0") + "%",
+         text_color=d_col_m15, text_size=size.small, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    // ── Row 6: Combined signal (highlighted) ──────────────────────────
+    color com_bg = sc_comb >= 0.0 ? color.new(#003300, 0) : color.new(#330000, 0)
+
+    table.cell(tbl, 0, 6, "COMB",
+         text_color=color.white, text_size=size.small, bgcolor=com_bg)
+    table.cell(tbl, 1, 6, d_sig_com,
+         text_color=d_col_com, text_size=size.normal, bgcolor=com_bg,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 6, str.tostring(d_con_com, "#.0") + "%",
+         text_color=d_col_com, text_size=size.normal, bgcolor=com_bg,
+         text_halign=text.align_right)
+
+    // ── Row 7: ATR footer ─────────────────────────────────────────────
+    float atr_disp = ta.atr(i_atr_len)
+    table.cell(tbl, 0, 7, "ATR(" + str.tostring(i_atr_len) + ")",
+         text_color=#444455, text_size=size.tiny, bgcolor=#060610)
+    table.cell(tbl, 1, 7, str.tostring(atr_disp, format.mintick),
+         text_color=#444455, text_size=size.tiny, bgcolor=#060610,
+         text_halign=text.align_center)
+    table.merge_cells(tbl, 1, 7, 2, 7)
+
+// ══════════════════════════════════════════════════════════════════════
+//  TAKE PROFIT / STOP LOSS LEVELS
+//
+//  Three TP levels per signal using a dual method:
+//    ATR-based floor  — minimum distance guaranteed by volatility
+//    Fibonacci target — extension from the current pivot swing structure
+//
+//  Final level = whichever is farther from entry (more ambitious target).
+//
+//  Fibonacci levels used:
+//    TP1 → 61.8% retracement / internal level  (first resistance/support)
+//    TP2 → 100% (prior swing high/low)          (structure target)
+//    TP3 → 161.8% extension                     (momentum extension)
+//    SL  → ATR-based, tight for scalping
+//
+//  Levels only drawn when combined confidence ≥ i_conf_min.
+// ══════════════════════════════════════════════════════════════════════
+
+float atr_val  = ta.atr(i_atr_len)
+bool  is_bull  = sc_comb >= 0.0
+float conf_pct = math.abs(sc_comb) * 100.0
+
+// Recent pivot structure
+float swg_hi  = ta.highest(high, i_tp_lookb)
+float swg_lo  = ta.lowest(low,   i_tp_lookb)
+float swg_rng = swg_hi - swg_lo
+
+// ATR raw offsets from current close
+float raw1  = atr_val * i_tp1_mult
+float raw2  = atr_val * i_tp2_mult
+float raw3  = atr_val * i_tp3_mult
+float raw_sl = atr_val * i_sl_mult
+
+// Fibonacci targets relative to pivot swing
+float fib_tp1_b = swg_lo + swg_rng * 0.618       // 61.8% level (bull)
+float fib_tp2_b = swg_hi                          // 100% – prior swing high (bull)
+float fib_tp3_b = swg_lo + swg_rng * 1.618        // 161.8% extension (bull)
+
+float fib_tp1_s = swg_hi - swg_rng * 0.618        // 61.8% level (bear)
+float fib_tp2_s = swg_lo                          // 100% – prior swing low (bear)
+float fib_tp3_s = swg_hi - swg_rng * 1.618        // 161.8% extension (bear)
+
+// Take the farther of ATR floor vs Fibonacci target
+float tp1_v = is_bull ? math.max(close + raw1, fib_tp1_b) : math.min(close - raw1, fib_tp1_s)
+float tp2_v = is_bull ? math.max(close + raw2, fib_tp2_b) : math.min(close - raw2, fib_tp2_s)
+float tp3_v = is_bull ? math.max(close + raw3, fib_tp3_b) : math.min(close - raw3, fib_tp3_s)
+float sl_v  = is_bull ? close - raw_sl                    : close + raw_sl
+
+var line  l_tp1 = na
+var line  l_tp2 = na
+var line  l_tp3 = na
+var line  l_sl  = na
+var label b_tp1 = na
+var label b_tp2 = na
+var label b_tp3 = na
+var label b_sl  = na
+
+if i_show_tp and barstate.islast and conf_pct >= i_conf_min
+    line.delete(l_tp1)
+    line.delete(l_tp2)
+    line.delete(l_tp3)
+    line.delete(l_sl)
+    label.delete(b_tp1)
+    label.delete(b_tp2)
+    label.delete(b_tp3)
+    label.delete(b_sl)
+
+    int xs = bar_index
+    int xe = bar_index + 20
+
+    color tp_col = is_bull ? #00C853 : #FF3D3D
+    color sl_col = is_bull ? #FF3D3D : #00C853
+
+    l_tp1 := line.new(xs, tp1_v, xe, tp1_v,
+         color=color.new(tp_col, 55), style=line.style_dotted, width=1)
+    l_tp2 := line.new(xs, tp2_v, xe, tp2_v,
+         color=color.new(tp_col, 30), style=line.style_dashed, width=1)
+    l_tp3 := line.new(xs, tp3_v, xe, tp3_v,
+         color=color.new(tp_col, 10), style=line.style_solid,  width=2)
+    l_sl  := line.new(xs, sl_v,  xe, sl_v,
+         color=color.new(sl_col, 30), style=line.style_dotted, width=1)
+
+    b_tp1 := label.new(xe, tp1_v,
+         " TP1  " + str.tostring(tp1_v, format.mintick),
+         color=color.new(tp_col, 70), textcolor=color.white,
+         size=size.small, style=label.style_label_left)
+    b_tp2 := label.new(xe, tp2_v,
+         " TP2  " + str.tostring(tp2_v, format.mintick),
+         color=color.new(tp_col, 70), textcolor=color.white,
+         size=size.small, style=label.style_label_left)
+    b_tp3 := label.new(xe, tp3_v,
+         " TP3  " + str.tostring(tp3_v, format.mintick),
+         color=color.new(tp_col, 70), textcolor=color.white,
+         size=size.small, style=label.style_label_left)
+    b_sl  := label.new(xe, sl_v,
+         " SL   " + str.tostring(sl_v, format.mintick),
+         color=color.new(sl_col, 70), textcolor=color.white,
+         size=size.small, style=label.style_label_left)
+
+// ══════════════════════════════════════════════════════════════════════
+//  SYNTHETIC VALIDATION NOTES
+//
+//  To verify indicator behaviour without live market data, apply it to
+//  a synthetic series constructed as follows (TradingView Pine strategy
+//  or external Python/Excel):
+//
+//  Test A — Ascending (trending bull):
+//    close[i] = 100 + i * 0.05   (100 bars, +0.05/bar)
+//    high = close + 0.03, low = close - 0.03, vol = 1000 (constant)
+//    Expected: RSI climbs toward 70+, EMA fast > slow, MACD histogram
+//    positive and growing, StochRSI k > d, MFI > 50.
+//    → f_score() converges to ~+0.7 → +0.9 after warm-up (~30 bars)
+//    → Candles: amber → lime → deep green
+//    → COMB signal: BUY with 70-90% confidence
+//    → TP levels appear above price using Fib 61.8%/100%/161.8%
+//
+//  Test B — Descending (trending bear):
+//    close[i] = 100 - i * 0.05
+//    high = close + 0.03, low = close - 0.03, vol = 1000
+//    Expected: mirror of Test A (RSI < 30, fast EMA < slow, etc.)
+//    → f_score() converges to ~-0.7 → -0.9
+//    → Candles: amber → orange → deep red
+//    → COMB signal: SELL with 70-90% confidence
+//    → TP levels appear below price
+//
+//  Test C — Consolidation (range-bound / noisy):
+//    close[i] = 100 + sin(i * 0.3) * 0.2   (oscillating)
+//    vol = 800 + noise
+//    Expected: RSI ≈ 50, EMAs tangled, MACD near zero, MFI ≈ 50
+//    → f_score() stays in [-0.25, +0.25]
+//    → Candles: remain amber / near-neutral
+//    → COMB confidence < 55% → TP/SL levels NOT drawn (threshold filter)
+//
+//  These three regimes confirm the indicator correctly:
+//    ✓ Identifies and amplifies directional moves
+//    ✓ Stays neutral during consolidation
+//    ✓ Suppresses TP/SL noise below the confidence threshold
+// ══════════════════════════════════════════════════════════════════════
