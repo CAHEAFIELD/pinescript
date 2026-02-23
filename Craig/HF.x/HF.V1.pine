@@ -200,15 +200,21 @@ f_disp(float sc) =>
 [d_sig_m15, d_con_m15, d_col_m15] = f_disp(sc_m15)
 [d_sig_com, d_con_com, d_col_com] = f_disp(sc_comb)
 
+// ── Helper: convert dashboard position string to position.* constant ──────
+// `position` is an enum namespace in Pine v6, not a valid variable type.
+// Using an explicit `position` type annotation causes a compile error.
+f_tbl_pos(string s) =>
+    (s == "top_right"    ? position.top_right    :
+     s == "top_left"     ? position.top_left     :
+     s == "bottom_right" ? position.bottom_right :
+     s == "bottom_left"  ? position.bottom_left  :
+     s == "middle_right" ? position.middle_right :
+                           position.middle_left)
+
 var table tbl = na
 
 if i_show_table and barstate.islast
-    position tpos = (i_tbl_pos == "top_right"    ? position.top_right    :
-                      i_tbl_pos == "top_left"     ? position.top_left     :
-                      i_tbl_pos == "bottom_right" ? position.bottom_right :
-                      i_tbl_pos == "bottom_left"  ? position.bottom_left  :
-                      i_tbl_pos == "middle_right" ? position.middle_right :
-                                                    position.middle_left)
+    tpos = f_tbl_pos(i_tbl_pos)
 
     tbl := table.new(tpos, 3, 8,
          bgcolor      = color.new(#0A0A14, 8),
