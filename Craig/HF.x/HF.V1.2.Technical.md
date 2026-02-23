@@ -687,6 +687,18 @@ namespace cAlgo
         [Parameter("Enable Advisory Telemetry", DefaultValue = false)]
         public bool EnableTelemetry { get; set; }
 
+        // Stochastic RSI configuration (mirrors Pine inputs i_sr_rsi, i_sr_st, i_sr_k, i_sr_d)
+        [Parameter("Stoch RSI - RSI Length", DefaultValue = 14, MinValue = 1, MaxValue = 200)]
+        public int SrRsiLength { get; set; }
+
+        [Parameter("Stoch RSI - Stoch Length", DefaultValue = 14, MinValue = 1, MaxValue = 200)]
+        public int SrStochLength { get; set; }
+
+        [Parameter("Stoch RSI - %K Smoothing", DefaultValue = 3, MinValue = 1, MaxValue = 200)]
+        public int SrK { get; set; }
+
+        [Parameter("Stoch RSI - %D Smoothing", DefaultValue = 3, MinValue = 1, MaxValue = 200)]
+        public int SrD { get; set; }
         // ── Indicator references ─────────────────────────────────────
         private RelativeStrengthIndex _rsi;
         private ExponentialMovingAverage _emaFast;
