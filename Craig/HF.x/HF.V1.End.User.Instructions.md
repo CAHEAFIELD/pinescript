@@ -228,7 +228,7 @@ Open Settings via the ⚙️ icon next to the indicator name.
 | Signal | **9** | Lower = more reactive histogram |
 
 > Also weighted at **1.5×**. For M1/M2 scalping, `6/13/5` is a popular fast variant.
-> Keep fast < slow at all times (enforced by input validation).
+> Keep fast < slow at all times; this is a recommended constraint and is **not** automatically enforced by the script, so double-check your inputs.
 
 ---
 

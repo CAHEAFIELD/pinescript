@@ -50,10 +50,10 @@ Volatility Expansion / Volume Profile / Order Block / VWAP Deviation)*
 *(e.g. M1 + M5 + M15 + H1)*
 
 **Output file names (replace X with your project prefix):**
-- Pine Script:        `<<PREFIX>>/<<VERSION>>.pine`
-- C# cBot:            `<<PREFIX>>/<<VERSION>>.cs`
-- End User Guide:     `<<PREFIX>>/<<VERSION>>.End.User.Instructions.md`
-- Technical Docs:     `<<PREFIX>>/<<VERSION>>.Technical.md`
+- Pine Script:        `<<PREFIX>>/<<VERSION>>/<<VERSION>>.pine`
+- C# cBot:            `<<PREFIX>>/<<VERSION>>/<<VERSION>>.cs`
+- End User Guide:     `<<PREFIX>>/<<VERSION>>/<<VERSION>>.End.User.Instructions.md`
+- Technical Docs:     `<<PREFIX>>/<<VERSION>>/<<VERSION>>.Technical.md`
 
 ---
 
@@ -388,11 +388,11 @@ After the agent completes PR 1 (Research), use these prompts for subsequent PRs.
 ### PR 2 prompt (paste after PR 1 research doc is complete)
 
 ```
-Based on the research and architecture decisions in <<PREFIX>>/<<VERSION>>.research.md,
+Based on the research and architecture decisions in <<PREFIX>>/<<VERSION>>/<<VERSION>>.research.md,
 now implement PR 2: the complete Pine Script v6 indicator file.
 
-Reference file: <<PREFIX>>/<<VERSION>>.research.md (already written)
-Output: <<PREFIX>>/<<VERSION>>.pine
+Reference file: <<PREFIX>>/<<VERSION>>/<<VERSION>>.research.md (already written)
+Output: <<PREFIX>>/<<VERSION>>/<<VERSION>>.pine
 
 Follow ALL requirements in section 4 PR 2 of the base prompt.
 Use the indicator selections and weights documented in the research file.
@@ -402,11 +402,11 @@ Do not deviate from the research decisions without explaining why in the code co
 ### PR 3 prompt
 
 ```
-Based on <<PREFIX>>/<<VERSION>>.pine (Pine Script already written),
+Based on <<PREFIX>>/<<VERSION>>/<<VERSION>>.pine (Pine Script already written),
 now implement PR 3: the cTrader Automate v1.014 cBot in C#.
 
-Reference: <<PREFIX>>/<<VERSION>>.pine
-Output: <<PREFIX>>/<<VERSION>>.cs
+Reference: <<PREFIX>>/<<VERSION>>/<<VERSION>>.pine
+Output: <<PREFIX>>/<<VERSION>>/<<VERSION>>.cs
 
 Mirror the f_score() logic exactly. Follow section 4 PR 3 requirements.
 Include full XML documentation and trade execution rules.
@@ -415,12 +415,12 @@ Include full XML documentation and trade execution rules.
 ### PR 4 prompt
 
 ```
-Based on <<PREFIX>>/<<VERSION>>.pine and <<PREFIX>>/<<VERSION>>.cs,
+Based on <<PREFIX>>/<<VERSION>>/<<VERSION>>.pine and <<PREFIX>>/<<VERSION>>/<<VERSION>>.cs,
 now write PR 4: both documentation files.
 
 Outputs:
-  <<PREFIX>>/<<VERSION>>.End.User.Instructions.md
-  <<PREFIX>>/<<VERSION>>.Technical.md
+  <<PREFIX>>/<<VERSION>>/<<VERSION>>.End.User.Instructions.md
+  <<PREFIX>>/<<VERSION>>/<<VERSION>>.Technical.md
 
 Follow section 4 PR 4 requirements exactly.
 The End User doc should be readable by non-technical traders.
@@ -432,7 +432,7 @@ The Technical doc should be detailed enough for a developer to re-implement the 
 ```
 Based on all files written in PRs 1–4, now write PR 5: the validation report.
 
-Output: <<PREFIX>>/<<VERSION>>.Validation.md
+Output: <<PREFIX>>/<<VERSION>>/<<VERSION>>.Validation.md
 
 Run through the synthetic test cases defined in the research doc.
 Document expected vs actual behaviour for each regime.
@@ -447,3 +447,18 @@ Follow section 4 PR 5 requirements.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02 | CAHEAFIELD | Initial version — derived from HF.V1 build workflow |
+
+---
+
+## Continuous Learning (Copilot Review Deltas)
+
+> **Instruction for every future run:** At the start of each session, scan for new Copilot code-review comments under `Craig/**/*.*` and `copilot/**/*.*`. If any review raises a durable, reusable coding rule not already listed below, append it to this section (one bullet per rule, no duplicates).
+
+### Special instructions accumulated from reviews
+
+- **Pine Script v6: implicit line continuations are not allowed.** Never rely on dangling operators or ternary parts carried across a newline. Keep ternaries/operators valid at end-of-line by either writing the full expression on one logical line, or wrapping the entire expression in parentheses so multi-line continuation is syntactically unambiguous. Prefer parentheses-wrapped expressions for all multi-line arithmetic and ternary readability.
+- **`ta.mfi` in Pine v6 takes exactly 2 arguments:** `ta.mfi(source, length)`. Do not pass `volume` as a separate argument; the built-in uses the chart's volume series internally.
+- **`math.round()` in Pine v6 is single-argument.** To round to N decimal places use scaling: `math.round(x * 10^N) / 10^N`.
+- **Series functions (`ta.atr`, `ta.rsi`, etc.) must be called at stable (top-level) scope.** Calling them inside conditional blocks (`if barstate.islast`, etc.) triggers the "recommended to extract call from this scope" warning and may produce incorrect results. Compute the series value unconditionally at the top level, store it in a variable, and reference the variable inside conditional blocks.
+- **Stop-loss levels should use a consistent "risk" colour (red) regardless of trade direction.** Reserve directional colours (green/red) for TP levels only.
+- **Output file paths must use the nested `<<PREFIX>>/<<VERSION>>/<<VERSION>>.*` structure** to match the actual project layout. Both the "Output file names" spec section and the "OUTPUT FILE STRUCTURE" block diagram must agree.

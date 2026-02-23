@@ -119,8 +119,8 @@ f_score() =>
     // Stronger signal when histogram is growing in its direction.
     [macd_l, macd_s, macd_h] = ta.macd(close, i_macd_f, i_macd_s, i_macd_g)
     float mh_prev = nz(macd_h[1])
-    float s_macd  = macd_h > 0.0 ? (macd_h >= mh_prev ? 1.0 : 0.3) :
-                                    (macd_h <= mh_prev ? -1.0 : -0.3)
+    float s_macd  = (macd_h > 0.0 ? (macd_h >= mh_prev ? 1.0 : 0.3) :
+                                     (macd_h <= mh_prev ? -1.0 : -0.3))
 
     // ── 4. EMA Cross + price position (weight 1.5) ────────────────────
     // Normalised spread: how far apart are the EMAs relative to slow EMA?
@@ -130,15 +130,15 @@ f_score() =>
     float s_ema   = math.max(-1.0, math.min(1.0, spread))
 
     // ── 5. Money Flow Index (weight 0.8) ──────────────────────────────
-    float mfi14   = ta.mfi(hlc3, volume, i_mfi_len)
-    float s_mfi   = math.max(-1.0, math.min(1.0, (mfi14 - 50.0) / 50.0))
+    float mfi_val = ta.mfi(hlc3, i_mfi_len)
+    float s_mfi   = math.max(-1.0, math.min(1.0, (mfi_val - 50.0) / 50.0))
 
     // ── Weighted sum, normalised to [-1, +1] ──────────────────────────
-    float raw = s_rsi   * 1.0 +
-                s_stoch * 1.2 +
-                s_macd  * 1.5 +
-                s_ema   * 1.5 +
-                s_mfi   * 0.8
+    float raw = (s_rsi   * 1.0 +
+                 s_stoch * 1.2 +
+                 s_macd  * 1.5 +
+                 s_ema   * 1.5 +
+                 s_mfi   * 0.8)
     math.max(-1.0, math.min(1.0, raw / 6.0))
 
 // ══════════════════════════════════════════════════════════════════════
@@ -177,6 +177,9 @@ if i_color_candles
 
 barcolor(i_color_candles ? c_bar : na)
 
+// Top-level ATR — computed every bar so series functions stay in stable scope
+float atr_val = ta.atr(i_atr_len)
+
 // ══════════════════════════════════════════════════════════════════════
 //  DASHBOARD TABLE
 // ══════════════════════════════════════════════════════════════════════
@@ -185,7 +188,7 @@ barcolor(i_color_candles ? c_bar : na)
 //@param sc  Raw score in [-1.0, +1.0]
 //@returns   [signal_text, confidence_pct, signal_color]
 f_disp(float sc) =>
-    float  conf = math.round(math.abs(nz(sc)) * 100.0, 1)
+    float  conf = math.round(math.abs(nz(sc)) * 1000.0) / 10.0
     bool   bull = nz(sc) >= 0.0
     string sig  = bull ? "▲  BUY"  : "▼  SELL"
     color  col  = bull ? #00C853   : #FF3D3D
@@ -200,13 +203,12 @@ f_disp(float sc) =>
 var table tbl = na
 
 if i_show_table and barstate.islast
-    string tpos =
-         i_tbl_pos == "top_right"    ? position.top_right    :
-         i_tbl_pos == "top_left"     ? position.top_left     :
-         i_tbl_pos == "bottom_right" ? position.bottom_right :
-         i_tbl_pos == "bottom_left"  ? position.bottom_left  :
-         i_tbl_pos == "middle_right" ? position.middle_right :
-                                       position.middle_left
+    position tpos = (i_tbl_pos == "top_right"    ? position.top_right    :
+                      i_tbl_pos == "top_left"     ? position.top_left     :
+                      i_tbl_pos == "bottom_right" ? position.bottom_right :
+                      i_tbl_pos == "bottom_left"  ? position.bottom_left  :
+                      i_tbl_pos == "middle_right" ? position.middle_right :
+                                                    position.middle_left)
 
     tbl := table.new(tpos, 3, 8,
          bgcolor      = color.new(#0A0A14, 8),
@@ -283,10 +285,9 @@ if i_show_table and barstate.islast
          text_halign=text.align_right)
 
     // ── Row 7: ATR footer ─────────────────────────────────────────────
-    float atr_disp = ta.atr(i_atr_len)
     table.cell(tbl, 0, 7, "ATR(" + str.tostring(i_atr_len) + ")",
          text_color=#444455, text_size=size.tiny, bgcolor=#060610)
-    table.cell(tbl, 1, 7, str.tostring(atr_disp, format.mintick),
+    table.cell(tbl, 1, 7, str.tostring(atr_val, format.mintick),
          text_color=#444455, text_size=size.tiny, bgcolor=#060610,
          text_halign=text.align_center)
     table.merge_cells(tbl, 1, 7, 2, 7)
@@ -309,7 +310,6 @@ if i_show_table and barstate.islast
 //  Levels only drawn when combined confidence ≥ i_conf_min.
 // ══════════════════════════════════════════════════════════════════════
 
-float atr_val  = ta.atr(i_atr_len)
 bool  is_bull  = sc_comb >= 0.0
 float conf_pct = math.abs(sc_comb) * 100.0
 
@@ -362,7 +362,7 @@ if i_show_tp and barstate.islast and conf_pct >= i_conf_min
     int xe = bar_index + 20
 
     color tp_col = is_bull ? #00C853 : #FF3D3D
-    color sl_col = is_bull ? #FF3D3D : #00C853
+    color sl_col = #FF3D3D
 
     l_tp1 := line.new(xs, tp1_v, xe, tp1_v,
          color=color.new(tp_col, 55), style=line.style_dotted, width=1)

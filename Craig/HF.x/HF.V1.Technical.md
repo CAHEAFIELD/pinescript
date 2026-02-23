@@ -197,7 +197,7 @@ negative_flow = sum of raw_money_flow where tp <= tp[1]
 mfi = 100 × positive_flow / (positive_flow + negative_flow)
 ```
 
-Uses `ta.mfi(hlc3, volume, length)` — the standard Pine implementation.
+Implements MFI via Pine Script's built-in `ta.mfi(source, length)`, which internally uses the chart's volume series.
 Score: `(mfi - 50) / 50`, clamped to `[-1, +1]`.
 
 ---
