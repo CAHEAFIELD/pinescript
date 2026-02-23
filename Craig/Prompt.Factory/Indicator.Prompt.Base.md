@@ -141,7 +141,7 @@ Execute this work across **five pull requests**, each building on the last.
 
 #### PR 1 — Research & Architecture Document
 
-**Deliverable:** `<<PREFIX>>/<<VERSION>>.research.md`
+**Deliverable:** `<<PREFIX>>/<<VERSION>>/<<VERSION>>.research.md`
 
 Contents required:
 - Indicator selection: 5 chosen components with full justification
@@ -160,7 +160,7 @@ Do NOT write any code in PR 1.
 
 #### PR 2 — Pine Script v6 Indicator
 
-**Deliverable:** `<<PREFIX>>/<<VERSION>>.pine`
+**Deliverable:** `<<PREFIX>>/<<VERSION>>/<<VERSION>>.pine`
 
 Requirements:
 ```pine
@@ -192,7 +192,7 @@ Code quality requirements:
 
 #### PR 3 — C# cTrader Automate cBot
 
-**Deliverable:** `<<PREFIX>>/<<VERSION>>.cs`
+**Deliverable:** `<<PREFIX>>/<<VERSION>>/<<VERSION>>.cs`
 
 Requirements:
 ```csharp
@@ -225,8 +225,8 @@ SL:     Hard stop at SL level; close 100% immediately
 #### PR 4 — Documentation
 
 **Deliverables:**
-- `<<PREFIX>>/<<VERSION>>.End.User.Instructions.md`
-- `<<PREFIX>>/<<VERSION>>.Technical.md`
+- `<<PREFIX>>/<<VERSION>>/<<VERSION>>.End.User.Instructions.md`
+- `<<PREFIX>>/<<VERSION>>/<<VERSION>>.Technical.md`
 
 **End User Instructions must include:**
 - What the indicator does (plain English, no jargon)
@@ -259,7 +259,7 @@ SL:     Hard stop at SL level; close 100% immediately
 
 #### PR 5 — Synthetic Validation Report
 
-**Deliverable:** `<<PREFIX>>/<<VERSION>>.Validation.md`
+**Deliverable:** `<<PREFIX>>/<<VERSION>>/<<VERSION>>.Validation.md`
 
 Run the 3+ synthetic test series defined in PR 1.
 For each test:
@@ -463,3 +463,8 @@ Follow section 4 PR 5 requirements.
 - **Stop-loss levels should use a consistent "risk" colour (red) regardless of trade direction.** Reserve directional colours (green/red) for TP levels only.
 - **Output file paths must use the nested `<<PREFIX>>/<<VERSION>>/<<VERSION>>.*` structure** to match the actual project layout. Both the "Output file names" spec section and the "OUTPUT FILE STRUCTURE" block diagram must agree.
 - **`position` is NOT a valid variable type keyword in Pine v6.** `position.*` constants (e.g. `position.top_right`) belong to an enum namespace used exclusively for table placement arguments. Never write `position tpos = ...`. Instead, extract the mapping into a small helper function (e.g. `f_tbl_pos(string s) => (s == "top_right" ? position.top_right : ...)`) and call it with an untyped (or `var`-prefixed) assignment at the call site.
+- **All five PR deliverable paths must use the nested structure.** PR1 through PR5 deliverables all follow `<<PREFIX>>/<<VERSION>>/<<VERSION>>.*` — not the flat `<<PREFIX>>/<<VERSION>>.*` form. Keep the "Deliverable:" line, the Section B follow-on prompts, and the OUTPUT FILE STRUCTURE block diagram all consistent.
+- **TP/SL objects: prefer create-once / update-in-place over delete-and-recreate.** Declare line/label handles as `var` at script scope. In the `if show_levels` block, only call `line.new()`/`label.new()` when `na(handle)`. On subsequent evaluations, use `line.set_xy1()`, `line.set_color()`, `label.set_text()`, etc. When hiding, set color to `color.new(color.gray, 100)` (fully transparent) instead of deleting — this keeps handles stable, eliminates flicker, and avoids consuming the `max_lines_count`/`max_labels_count` budget unnecessarily.
+- **Functions that need to return component scores alongside a combined score should use a tuple return.** Define `f_score_detail() => [combined, s_a, s_b, ...]` and wrap it with a single-value function `f_score() => [sc, _, _, _, _, _] = f_score_detail(); sc` for use inside `request.security()`. This avoids duplicating indicator math and allows telemetry consumers to destructure all components at chart level via `[sc_cur, t_s_a, ...] = f_score_detail()`.
+- **`display=display.data_window` on `plot()` exposes values in TradingView's Data Window panel without rendering anything on the chart.** Use this for advisory telemetry and gate-debug flags. Gate the value to `na` (not `0`) when the feature is disabled so the plot shows as "N/A" rather than a misleading zero.
+- **`alertcondition()` messages are static; use `alert()` for dynamic JSON payloads.** `alertcondition()` defines a named trigger visible in TradingView's Alerts UI. For dynamic content (symbol, score values, bar_index, etc.), call `alert(json_string, alert.freq_once_per_bar_close)` inside `if telemetry_enabled and barstate.isconfirmed`. Both can coexist: `alertcondition` for UI discoverability, `alert()` for the actual payload.
