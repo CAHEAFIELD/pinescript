@@ -74,9 +74,8 @@ using cAlgo.API.Internals;
 
 namespace CAHEAFIELD.HF
 {
-    [Indicator(
-        Name         = "EA.HF Scalper v1.4",
-        Description  = "Advisory oscillator — cTrader port of EA.HF Scalper v1.4 Pine Script composite score.",
+    // Advisory oscillator — cTrader port of EA.HF Scalper v1.4 Pine Script composite score.
+    [Indicator("EA.HF Scalper v1.4",
         IsOverlay    = false,
         AutoRescale  = false,
         AccessRights = AccessRights.None)]
