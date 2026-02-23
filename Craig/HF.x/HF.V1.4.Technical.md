@@ -85,7 +85,7 @@ The following inputs are declared with `display=display.none` and are therefore 
 | Input | Type | Default | Notes |
 |-------|------|---------|-------|
 | `i_neutral_zone` *(hidden)* | bool | false | Neutral Zone Filter |
-| `i_fib_sanity` *(hidden)* | bool | true | Fib Target Sanity Check |
+| `i_fib_sanity` *(hidden)* | bool | false | Fib Target Sanity Check |
 | `i_telemetry` *(hidden)* | bool | false | Enable Telemetry (Data Window) |
 
 ### All other inputs — unchanged from v1.3
