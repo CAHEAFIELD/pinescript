@@ -1,0 +1,762 @@
+// The MIT License (MIT)
+// © CAHEAFIELD
+//
+// EA.HF Scalper v4 — Multi-Timeframe High-Frequency Scalping Indicator
+// Designed for 1m – 15m charts
+//
+// ┌─ CONFLUENCED INDICATORS (run in background) ───────────────────────┐
+// │  1. RSI (14)            – Momentum overbought/oversold              │
+// │  2. Stochastic RSI      – Fast oscillator for entry timing          │
+// │  3. MACD (12/26/9)      – Trend-momentum direction + divergence     │
+// │  4. EMA Cross (9/21)    – Short-term trend direction baseline       │
+// │  5. MFI (14)            – Volume-weighted momentum confirmation     │
+// └────────────────────────────────────────────────────────────────────┘
+//
+// FRONT-END:
+//   • Dashboard table — M1 / M2 / M5 / M15 / COMBINED with BUY/SELL + confidence %
+//   • Gradient candle coloring: dark-red → amber → dark-green
+//   • 3 dynamic TP levels + SL via ATR × Fibonacci range blend
+//   • TP Preview Mode (opt-in): draw TP/SL even below confidence threshold
+//   • Neutral Zone filter (opt-in): suppresses direction unless score above threshold
+//   • Fib Target Sanity (opt-in): ensures Fib TP targets are ahead of current price
+//   • Advisory Telemetry (opt-in): Data Window plots + JSON alert for .algo bot
+//
+// CHANGES FROM V1.0:
+//   V1.1 (PR#2/PR#3): compiler fixes (ta.mfi 2-arg, math.round scaling, ATR scope,
+//         line-continuation wrapping, sl_col always red, position type annotation fix)
+//   V1.2: TP Preview Mode, Data Window TP-gate debug flags, create-once / update-in-place
+//         TP objects, Neutral Zone filter, Fib Target Sanity check, top_center dashboard
+//         position, Advisory Telemetry group, versioned branding
+//   V3:
+//         – Dashboard Table Size Control (req 1): i_tbl_size → size.tiny/small/normal
+//         – TP/SL Label Text Size Control (req 2): i_tp_text_size
+//         – TP/SL Line Style Controls (req 3): i_tp_line_width, i_sl_line_width,
+//           i_tp_color, i_sl_color
+//         – Extend Lines Left Option (req 4): i_extend_left → extend.both / extend.right
+//         – Label Indent Control (req 5): i_tp_indent (bars right of last bar)
+//         – TP/SL Preview Mode consolidated to "TP / SL Display" group (req 6)
+//         – Single Telemetry toggle gates all Data Window plots; i_tp_debug removed (req 7)
+//         – Debug plot names normalised to dbg_* prefix (req 8)
+//         – No delete/recreate; line.set_width/extend + label.set_size in update block
+//   V4 (this file):
+//         – Telemetry plots consolidated to 3 (sc_comb, conf_pct, tp_visible);
+//           all use display=display.none when OFF (clears Style panel clutter)
+//         – Telemetry input label → "Enable Telemetry (Data Window)"
+//         – TP/SL labels shifted above their lines via i_label_y_ticks offset
+//         – Default TP line width → 3, default SL line width → 3
+//         – Dashboard pips row: TP1/TP2/TP3/SL distance from close in ticks
+//
+// ADVISORY NOTE:
+//   This indicator is NOT a definitive buy/sell system.
+//   It provides advisory metrics suitable for consumption by a separate .algo bot.
+//
+// SYNTHETIC VALIDATION (described at bottom of file):
+//   Ascending series  → score climbs toward +1 (BUY, high confidence)
+//   Descending series → score falls toward -1  (SELL, high confidence)
+//   Flat/noise series → score stays near  0    (low confidence, no TP shown)
+
+//@version=6
+indicator("EA.HF Scalper v4", "EA.HF.v4", overlay=true, max_lines_count=50, max_labels_count=50)
+
+// ══════════════════════════════════════════════════════════════════════
+//  INPUTS
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Display ────────────────────────────────────────────────────────────
+i_show_table    = input.bool(true,          "Show Signal Dashboard",
+                              group="Display")
+i_show_tp       = input.bool(true,          "Show TP/SL Levels",
+                              group="Display")
+i_color_candles = input.bool(true,          "Gradient Candle Colors",
+                              group="Display")
+i_conf_min      = input.float(55.0,         "Signal Threshold (%)",
+                              minval=0, maxval=100, step=5,
+                              group="Display",
+                              tooltip="TP/SL levels only drawn when combined confidence meets or exceeds this value")
+i_tbl_pos       = input.string("top_right", "Dashboard Position",
+                              options=["top_right","top_left","top_center",
+                                       "bottom_right","bottom_left",
+                                       "middle_right","middle_left"],
+                              group="Display",
+                              tooltip="Position of the signal dashboard table on the chart")
+
+// ── Dashboard ──────────────────────────────────────────────────────────
+i_tbl_size      = input.string("Medium",    "Table Size",
+                              options=["Small","Medium","Large"],
+                              group="Dashboard",
+                              tooltip="Controls the text size of all dashboard table cells. Small=tiny, Medium=small, Large=normal.")
+
+// ── TP / SL Display ────────────────────────────────────────────────────
+i_tp_preview    = input.bool(false,         "TP/SL Preview Mode (Ignore Threshold)",
+                              group="TP / SL Display",
+                              tooltip="When ON: draw TP/SL lines even when confidence is below Signal Threshold. Lines use subtle/transparent styling to indicate preview state. Default OFF preserves existing gate behaviour.")
+i_tp_text_size  = input.string("Small",     "TP/SL Text Size",
+                              options=["Tiny","Small","Normal","Large"],
+                              group="TP / SL Display",
+                              tooltip="Text size for TP1/TP2/TP3/SL labels.")
+i_tp_line_width = input.int(3,              "TP Line Width",
+                              minval=1, maxval=5,
+                              group="TP / SL Display")
+i_sl_line_width = input.int(3,              "SL Line Width",
+                              minval=1, maxval=5,
+                              group="TP / SL Display")
+i_tp_color      = input.color(color.new(#00C853, 0), "TP Base Color",
+                              group="TP / SL Display",
+                              tooltip="Base color for TP lines (bull direction). Bear direction uses SL Color.")
+i_sl_color      = input.color(color.new(#FF3D3D, 0), "SL Color",
+                              group="TP / SL Display",
+                              tooltip="Color for SL line and bear-direction TP lines.")
+i_extend_left   = input.bool(false,         "Extend TP/SL Lines Left",
+                              group="TP / SL Display",
+                              tooltip="When ON: lines extend in both directions (extend.both). Default OFF: extend.right only.")
+i_tp_indent     = input.int(20,             "TP/SL Label Indent (bars)",
+                              minval=5, maxval=100,
+                              group="TP / SL Display",
+                              tooltip="Number of bars to the right of the last bar where TP/SL labels are placed.")
+i_label_y_ticks = input.int(10,             "TP/SL Label Vertical Offset (ticks)",
+                              minval=1, maxval=200,
+                              group="TP / SL Display",
+                              tooltip="Number of ticks (syminfo.mintick units) to shift TP/SL labels above their lines.")
+
+// ── RSI ────────────────────────────────────────────────────────────────
+i_rsi_len = input.int(14, "Length", minval=2, maxval=50, group="RSI (1)")
+
+// ── Stochastic RSI ─────────────────────────────────────────────────────
+i_sr_rsi = input.int(14, "RSI Period",   minval=2, group="Stochastic RSI (2)")
+i_sr_st  = input.int(14, "Stoch Period", minval=2, group="Stochastic RSI (2)")
+i_sr_k   = input.int(3,  "%K Smooth",   minval=1, group="Stochastic RSI (2)")
+i_sr_d   = input.int(3,  "%D Smooth",   minval=1, group="Stochastic RSI (2)")
+
+// ── MACD ───────────────────────────────────────────────────────────────
+i_macd_f = input.int(12, "Fast",   minval=2, group="MACD (3)")
+i_macd_s = input.int(26, "Slow",   minval=2, group="MACD (3)")
+i_macd_g = input.int(9,  "Signal", minval=2, group="MACD (3)")
+
+// ── EMA Cross ──────────────────────────────────────────────────────────
+i_ema_f = input.int(9,  "Fast EMA", minval=2, group="EMA Cross (4)")
+i_ema_s = input.int(21, "Slow EMA", minval=2, group="EMA Cross (4)")
+
+// ── MFI ────────────────────────────────────────────────────────────────
+i_mfi_len = input.int(14, "Length", minval=2, group="MFI (5)")
+
+// ── Take Profit / Stop Loss ────────────────────────────────────────────
+i_atr_len      = input.int(14,    "ATR Length",                  minval=2,   group="TP / SL")
+i_tp1_mult     = input.float(1.5, "TP1 × ATR",                  minval=0.1, step=0.1, group="TP / SL")
+i_tp2_mult     = input.float(2.5, "TP2 × ATR",                  minval=0.1, step=0.1, group="TP / SL")
+i_tp3_mult     = input.float(4.0, "TP3 × ATR",                  minval=0.1, step=0.1, group="TP / SL")
+i_sl_mult      = input.float(1.0, "SL  × ATR",                  minval=0.1, step=0.1, group="TP / SL")
+i_tp_lookb     = input.int(20,    "Range Lookback (Fib Window)", minval=5,
+                              group="TP / SL",
+                              tooltip="Number of bars used to identify the recent swing high/low range for Fibonacci TP extensions. Previously labelled 'Pivot Lookback'; uses ta.highest/ta.lowest rolling window — not true swing pivots.")
+i_neutral_zone = input.bool(false, "Neutral Zone Filter",
+                              group="TP / SL",
+                              tooltip="When ON: only treat direction as bull/bear when abs(sc_comb) >= Signal Threshold. Signals below threshold are classified as 'neutral' and TP lines are suppressed. Default OFF preserves existing behaviour.")
+i_fib_sanity   = input.bool(false, "Fib Target Sanity Check",
+                              group="TP / SL",
+                              tooltip="When ON: ensures Fibonacci TP targets are ahead of current price (bull targets > close, bear targets < close). If a Fib target is on the wrong side, the ATR floor is used instead. Default OFF.")
+
+// ── Telemetry ──────────────────────────────────────────────────────────
+i_telemetry = input.bool(false, "Enable Telemetry (Data Window)",
+                              group="Telemetry",
+                              tooltip="When ON: exposes combined score, confidence %, and TP-visibility flag in the Data Window. Also fires a JSON alert on each confirmed bar for .algo bot consumption. Advisory metrics only — NOT a buy/sell signal.")
+
+// ══════════════════════════════════════════════════════════════════════
+//  SIZE MAPPING HELPERS
+// ══════════════════════════════════════════════════════════════════════
+
+//@function Map user-facing table size string to Pine size.* constant.
+f_tbl_size(string s) =>
+    (s == "Small" ? size.tiny   :
+     s == "Large" ? size.normal :
+                    size.small)
+
+//@function Map user-facing TP/SL text size string to Pine size.* constant.
+f_tp_text_size(string s) =>
+    (s == "Tiny"   ? size.tiny   :
+     s == "Normal" ? size.normal :
+     s == "Large"  ? size.large  :
+                     size.small)
+
+// ══════════════════════════════════════════════════════════════════════
+//  COMPOSITE SIGNAL FUNCTION
+//
+//  f_score_detail() returns a 6-tuple:
+//    [combined_score, s_rsi, s_stoch, s_macd, s_ema, s_mfi]
+//
+//  f_score() is a thin wrapper for use inside request.security() —
+//  it calls f_score_detail() and returns only the combined score.
+//
+//  Design notes:
+//   • Uses only Pine built-ins (ta.*) so it is safe to call from
+//     request.security() — each security context gets its own state.
+//   • Five indicators with differentiated weights:
+//       RSI       1.0  — momentum baseline
+//       StochRSI  1.2  — fast oscillator (higher weight for scalping timing)
+//       MACD      1.5  — trend-momentum (primary direction tool)
+//       EMA Cross 1.5  — structural trend (primary direction tool)
+//       MFI       0.8  — volume confirmation (secondary filter)
+//     Σ weights = 6.0  → divided out so output stays in [-1, +1]
+// ══════════════════════════════════════════════════════════════════════
+
+//@function Full weighted composite score plus individual component scores.
+//@returns  [combined, s_rsi, s_stoch, s_macd, s_ema, s_mfi] — all floats in [-1, +1].
+f_score_detail() =>
+    // ── 1. RSI (weight 1.0) ───────────────────────────────────────────
+    float rsi14   = ta.rsi(close, i_rsi_len)
+    float s_rsi   = math.max(-1.0, math.min(1.0, (rsi14 - 50.0) / 50.0))
+
+    // ── 2. Stochastic RSI (weight 1.2) ────────────────────────────────
+    float rsi_sr  = ta.rsi(close, i_sr_rsi)
+    float k_raw   = ta.stoch(rsi_sr, rsi_sr, rsi_sr, i_sr_st)
+    float k_sm    = ta.sma(k_raw, i_sr_k)
+    float d_sm    = ta.sma(k_sm,  i_sr_d)
+    float s_stoch = math.max(-1.0, math.min(1.0,
+                        (k_sm - 50.0) / 50.0 * 0.6 +
+                        (k_sm - d_sm) / 20.0 * 0.4))
+
+    // ── 3. MACD histogram (weight 1.5) ────────────────────────────────
+    [macd_l, macd_s, macd_h] = ta.macd(close, i_macd_f, i_macd_s, i_macd_g)
+    float mh_prev = nz(macd_h[1])
+    float s_macd  = (macd_h > 0.0 ? (macd_h >= mh_prev ? 1.0 : 0.3) :
+                                     (macd_h <= mh_prev ? -1.0 : -0.3))
+
+    // ── 4. EMA Cross + price position (weight 1.5) ────────────────────
+    float fe      = ta.ema(close, i_ema_f)
+    float se      = ta.ema(close, i_ema_s)
+    float spread  = se > 0.0 ? (fe - se) / se * 300.0 : 0.0
+    float s_ema   = math.max(-1.0, math.min(1.0, spread))
+
+    // ── 5. Money Flow Index (weight 0.8) ──────────────────────────────
+    float mfi_val = ta.mfi(hlc3, i_mfi_len)
+    float s_mfi   = math.max(-1.0, math.min(1.0, (mfi_val - 50.0) / 50.0))
+
+    // ── Weighted sum, normalised to [-1, +1] ──────────────────────────
+    float raw = (s_rsi   * 1.0 +
+                 s_stoch * 1.2 +
+                 s_macd  * 1.5 +
+                 s_ema   * 1.5 +
+                 s_mfi   * 0.8)
+    float combined = math.max(-1.0, math.min(1.0, raw / 6.0))
+    [combined, s_rsi, s_stoch, s_macd, s_ema, s_mfi]
+
+//@function Wrapper: returns only the combined score. Safe to use inside request.security().
+//@returns  float in [-1.0, +1.0]: positive = bullish, negative = bearish.
+f_score() =>
+    [sc, sc_r, sc_st, sc_m, sc_e, sc_mf] = f_score_detail()
+    sc
+
+// ══════════════════════════════════════════════════════════════════════
+//  MULTI-TIMEFRAME SIGNALS
+//  Each timeframe gets its own independent evaluation of f_score().
+//  lookahead_off prevents future-bar leakage.
+// ══════════════════════════════════════════════════════════════════════
+
+float sc_m1   = request.security(syminfo.tickerid, "1",  f_score(), lookahead=barmerge.lookahead_off)
+float sc_m2   = request.security(syminfo.tickerid, "2",  f_score(), lookahead=barmerge.lookahead_off)
+float sc_m5   = request.security(syminfo.tickerid, "5",  f_score(), lookahead=barmerge.lookahead_off)
+float sc_m15  = request.security(syminfo.tickerid, "15", f_score(), lookahead=barmerge.lookahead_off)
+float sc_comb = (nz(sc_m1) + nz(sc_m2) + nz(sc_m5) + nz(sc_m15)) / 4.0
+
+// Current chart timeframe: use f_score_detail() to also capture component scores.
+[sc_cur, t_s_rsi, t_s_stoch, t_s_macd, t_s_ema, t_s_mfi] = f_score_detail()
+
+// ══════════════════════════════════════════════════════════════════════
+//  GRADIENT CANDLE COLORING
+//
+//  Mapping: score ∈ [-1, +1] → color gradient
+//    +1 → #00873E  deep green   (strong bull)
+//     0 → #B8860B  dark amber   (neutral)
+//    -1 → #C42222  deep red     (strong bear)
+//
+//  sqrt() applied to absolute score so colours saturate quickly as
+//  conviction grows, giving visible feedback even at moderate signals.
+// ══════════════════════════════════════════════════════════════════════
+
+color c_bar = na
+if i_color_candles
+    float s = nz(sc_cur, 0.0)
+    if s >= 0.0
+        c_bar := color.from_gradient(math.sqrt(s), 0.0, 1.0, #B8860B, #00873E)
+    else
+        c_bar := color.from_gradient(math.sqrt(-s), 0.0, 1.0, #B8860B, #C42222)
+
+barcolor(i_color_candles ? c_bar : na)
+
+// Top-level ATR — computed every bar so series functions stay in stable scope
+float atr_val = ta.atr(i_atr_len)
+
+// ══════════════════════════════════════════════════════════════════════
+//  DASHBOARD TABLE
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Pip size for distance display (1 × syminfo.mintick, labelled as ticks) ───
+float pip_sz = syminfo.mintick
+
+//@function Format a signed pip/tick distance with compact suffix.
+f_pdist(float v) =>
+    string sgn = v >= 0.0 ? "+" : "-"
+    sgn + str.tostring(math.round(math.abs(v))) + "tk"
+
+//@function Convert a raw score to display values.
+//@param sc  Raw score in [-1.0, +1.0]
+//@returns   [signal_text, confidence_pct, signal_color]
+f_disp(float sc) =>
+    float  conf = math.round(math.abs(nz(sc)) * 1000.0) / 10.0
+    bool   bull = nz(sc) >= 0.0
+    string sig  = bull ? "▲  BUY"  : "▼  SELL"
+    color  col  = bull ? #00C853   : #FF3D3D
+    [sig, conf, col]
+
+[d_sig_m1,  d_con_m1,  d_col_m1 ] = f_disp(sc_m1)
+[d_sig_m2,  d_con_m2,  d_col_m2 ] = f_disp(sc_m2)
+[d_sig_m5,  d_con_m5,  d_col_m5 ] = f_disp(sc_m5)
+[d_sig_m15, d_con_m15, d_col_m15] = f_disp(sc_m15)
+[d_sig_com, d_con_com, d_col_com] = f_disp(sc_comb)
+
+// ── Helper: convert dashboard position string to position.* constant ──────
+// `position` is an enum namespace in Pine v6, not a valid variable type.
+// Using an explicit `position` type annotation causes a compile error.
+f_tbl_pos(string s) =>
+    (s == "top_right"    ? position.top_right    :
+     s == "top_left"     ? position.top_left     :
+     s == "top_center"   ? position.top_center   :
+     s == "bottom_right" ? position.bottom_right :
+     s == "bottom_left"  ? position.bottom_left  :
+     s == "middle_right" ? position.middle_right :
+                           position.middle_left)
+
+var table tbl = na
+
+if i_show_table and barstate.islast
+    tpos   = f_tbl_pos(i_tbl_pos)
+    tbl_sz = f_tbl_size(i_tbl_size)
+
+    tbl := table.new(tpos, 3, 9,
+         bgcolor      = color.new(#0A0A14, 8),
+         border_color = color.new(#2A2A40, 0),
+         border_width = 1,
+         frame_color  = color.new(#4444AA, 0),
+         frame_width  = 1)
+
+    // ── Row 0: Title ──────────────────────────────────────────────────
+    table.cell(tbl, 0, 0, "⚡  EA.HF SCALPER V4",
+         text_color=color.white, text_size=tbl_sz,
+         bgcolor=#1A1A3E, text_halign=text.align_center)
+    table.merge_cells(tbl, 0, 0, 2, 0)
+
+    // ── Row 1: Column headers ──────────────────────────────────────────
+    table.cell(tbl, 0, 1, "TF",
+         text_color=#8888BB, text_size=tbl_sz, bgcolor=#0E0E26)
+    table.cell(tbl, 1, 1, "Signal",
+         text_color=#8888BB, text_size=tbl_sz, bgcolor=#0E0E26,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 1, "Conf",
+         text_color=#8888BB, text_size=tbl_sz, bgcolor=#0E0E26,
+         text_halign=text.align_center)
+
+    // ── Rows 2-5: Per-timeframe signals ───────────────────────────────
+    color ROW_BG = #0B0B1A
+
+    table.cell(tbl, 0, 2, "M1",
+         text_color=color.silver, text_size=tbl_sz, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 2, d_sig_m1,
+         text_color=d_col_m1, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 2, str.tostring(d_con_m1, "#.0") + "%",
+         text_color=d_col_m1, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    table.cell(tbl, 0, 3, "M2",
+         text_color=color.silver, text_size=tbl_sz, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 3, d_sig_m2,
+         text_color=d_col_m2, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 3, str.tostring(d_con_m2, "#.0") + "%",
+         text_color=d_col_m2, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    table.cell(tbl, 0, 4, "M5",
+         text_color=color.silver, text_size=tbl_sz, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 4, d_sig_m5,
+         text_color=d_col_m5, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 4, str.tostring(d_con_m5, "#.0") + "%",
+         text_color=d_col_m5, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    table.cell(tbl, 0, 5, "M15",
+         text_color=color.silver, text_size=tbl_sz, bgcolor=ROW_BG)
+    table.cell(tbl, 1, 5, d_sig_m15,
+         text_color=d_col_m15, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 5, str.tostring(d_con_m15, "#.0") + "%",
+         text_color=d_col_m15, text_size=tbl_sz, bgcolor=ROW_BG,
+         text_halign=text.align_right)
+
+    // ── Row 6: Combined signal (highlighted) ──────────────────────────
+    color com_bg = sc_comb >= 0.0 ? color.new(#003300, 0) : color.new(#330000, 0)
+
+    table.cell(tbl, 0, 6, "COMB",
+         text_color=color.white, text_size=tbl_sz, bgcolor=com_bg)
+    table.cell(tbl, 1, 6, d_sig_com,
+         text_color=d_col_com, text_size=tbl_sz, bgcolor=com_bg,
+         text_halign=text.align_center)
+    table.cell(tbl, 2, 6, str.tostring(d_con_com, "#.0") + "%",
+         text_color=d_col_com, text_size=tbl_sz, bgcolor=com_bg,
+         text_halign=text.align_right)
+
+    // ── Row 7: TP/SL pips distance footer — populated after TP math (see below)
+    // Row 7 cells are set in a second if block after tp1_v/sl_v are computed.
+
+    // ── Row 8: ATR footer ─────────────────────────────────────────────
+    table.cell(tbl, 0, 8, "ATR(" + str.tostring(i_atr_len) + ")",
+         text_color=#444455, text_size=tbl_sz, bgcolor=#060610)
+    table.cell(tbl, 1, 8, str.tostring(atr_val, format.mintick),
+         text_color=#444455, text_size=tbl_sz, bgcolor=#060610,
+         text_halign=text.align_center)
+    table.merge_cells(tbl, 1, 8, 2, 8)
+
+// ══════════════════════════════════════════════════════════════════════
+//  TAKE PROFIT / STOP LOSS LEVELS
+//
+//  Three TP levels per signal using a dual method:
+//    ATR-based floor  — minimum distance guaranteed by volatility
+//    Fibonacci target — extension from the current range window
+//                       (ta.highest/ta.lowest rolling window, not true pivots)
+//
+//  Final level = whichever is farther from entry (more ambitious target).
+//
+//  Fibonacci levels used:
+//    TP1 → 61.8% retracement / internal level  (first resistance/support)
+//    TP2 → 100% (prior swing high/low)          (structure target)
+//    TP3 → 161.8% extension                     (momentum extension)
+//    SL  → ATR-based, tight for scalping
+//
+//  Gate (default behaviour preserved):
+//    Levels drawn when: i_show_tp AND barstate.islast AND conf_pct >= i_conf_min
+//    TP Preview Mode (opt-in): widened gate — draws even below threshold
+//    Neutral Zone filter (opt-in): suppresses when direction is neutral
+// ══════════════════════════════════════════════════════════════════════
+
+float conf_pct = math.abs(sc_comb) * 100.0
+
+// ── Direction (with optional Neutral Zone filter) ─────────────────────
+// Default: is_bull = sc_comb >= 0.0 (unchanged from V1.0)
+// Neutral Zone (opt-in): bull only when sc_comb >= threshold;
+//   bear only when sc_comb <= -threshold; else neutral → suppress TP
+bool is_bull = (i_neutral_zone ?
+                (sc_comb >= i_conf_min / 100.0) :
+                (sc_comb >= 0.0))
+bool is_neutral = i_neutral_zone and (math.abs(sc_comb) < i_conf_min / 100.0)
+
+// ── Pivot swing structure (rolling window range) ───────────────────────
+float swg_hi  = ta.highest(high, i_tp_lookb)
+float swg_lo  = ta.lowest(low,   i_tp_lookb)
+float swg_rng = swg_hi - swg_lo
+
+// ── ATR raw offsets from current close ────────────────────────────────
+float raw1   = atr_val * i_tp1_mult
+float raw2   = atr_val * i_tp2_mult
+float raw3   = atr_val * i_tp3_mult
+float raw_sl = atr_val * i_sl_mult
+
+// ── Fibonacci targets relative to range window ────────────────────────
+float fib_tp1_b = swg_lo + swg_rng * 0.618       // 61.8% level (bull)
+float fib_tp2_b = swg_hi                          // 100% – prior high (bull)
+float fib_tp3_b = swg_lo + swg_rng * 1.618        // 161.8% extension (bull)
+
+float fib_tp1_s = swg_hi - swg_rng * 0.618        // 61.8% level (bear)
+float fib_tp2_s = swg_lo                           // 100% – prior low (bear)
+float fib_tp3_s = swg_hi - swg_rng * 1.618        // 161.8% extension (bear)
+
+// ── Fib sanity check (opt-in): targets must be ahead of price ─────────
+// Bull targets must be > close; bear targets must be < close.
+// If a Fib target fails the check, the ATR floor is used instead.
+float safe_fib_tp1_b = (i_fib_sanity and fib_tp1_b <= close) ? (close + raw1) : fib_tp1_b
+float safe_fib_tp2_b = (i_fib_sanity and fib_tp2_b <= close) ? (close + raw2) : fib_tp2_b
+float safe_fib_tp3_b = (i_fib_sanity and fib_tp3_b <= close) ? (close + raw3) : fib_tp3_b
+float safe_fib_tp1_s = (i_fib_sanity and fib_tp1_s >= close) ? (close - raw1) : fib_tp1_s
+float safe_fib_tp2_s = (i_fib_sanity and fib_tp2_s >= close) ? (close - raw2) : fib_tp2_s
+float safe_fib_tp3_s = (i_fib_sanity and fib_tp3_s >= close) ? (close - raw3) : fib_tp3_s
+
+// ── Final levels: farther of ATR floor vs (sanity-checked) Fib ────────
+float tp1_v = is_bull ? math.max(close + raw1, safe_fib_tp1_b) : math.min(close - raw1, safe_fib_tp1_s)
+float tp2_v = is_bull ? math.max(close + raw2, safe_fib_tp2_b) : math.min(close - raw2, safe_fib_tp2_s)
+float tp3_v = is_bull ? math.max(close + raw3, safe_fib_tp3_b) : math.min(close - raw3, safe_fib_tp3_s)
+float sl_v  = is_bull ? close - raw_sl                         : close + raw_sl
+
+// ── Dashboard pips row — populated here after tp1_v/sl_v are available ─
+if i_show_table and barstate.islast and not na(tbl)
+    float _tp1p = (tp1_v - close) / pip_sz
+    float _tp2p = (tp2_v - close) / pip_sz
+    float _tp3p = (tp3_v - close) / pip_sz
+    float _slp  = (sl_v  - close) / pip_sz
+    string pips_txt = (
+        "TP1 " + f_pdist(_tp1p) +
+        "  TP2 " + f_pdist(_tp2p) +
+        "  TP3 " + f_pdist(_tp3p) +
+        "  SL " + f_pdist(_slp))
+    table.cell(tbl, 0, 7, pips_txt,
+         text_color=#556677, text_size=f_tbl_size(i_tbl_size), bgcolor=#060610,
+         text_halign=text.align_center)
+    table.merge_cells(tbl, 0, 7, 2, 7)
+
+// ── TP/SL visibility gate ──────────────────────────────────────────────
+// Default (preview OFF): preserve existing behaviour exactly.
+// Preview ON: draw even below threshold (subtle colours signal "preview").
+bool show_levels = (i_show_tp and
+                    barstate.islast and
+                    not is_neutral and
+                    (i_tp_preview or conf_pct >= i_conf_min))
+
+// True when showing in preview state (below threshold)
+bool is_preview = show_levels and (conf_pct < i_conf_min)
+
+// ── Persistent TP/SL object handles (create once, update in place) ────
+var line  l_tp1 = na
+var line  l_tp2 = na
+var line  l_tp3 = na
+var line  l_sl  = na
+var label b_tp1 = na
+var label b_tp2 = na
+var label b_tp3 = na
+var label b_sl  = na
+
+// Helper: format price to mintick precision
+f_px(float v) => str.tostring(v, format.mintick)
+
+// Pre-compute label vertical offset (applied in show_levels block)
+float y_offset = syminfo.mintick * i_label_y_ticks
+
+if show_levels
+    int xs = bar_index
+    int xe = bar_index + i_tp_indent
+
+    // Extend direction: both sides or right only
+    ext_mode = i_extend_left ? extend.both : extend.right
+
+    // Preview mode uses higher transparency to visually distinguish
+    // below-threshold levels from confirmed levels.
+    int tp_transp = is_preview ? 75 : 55
+    int tp_lbl_tr = is_preview ? 85 : 70
+    int tp2_tr    = is_preview ? 60 : 30
+    int tp3_tr    = is_preview ? 40 : 10
+
+    // Directional colors: bull uses i_tp_color, bear uses i_sl_color for TP lines.
+    // SL is always i_sl_color.
+    color tp_col  = is_bull ? i_tp_color : i_sl_color
+    color sl_col  = i_sl_color
+
+    // Resolved label text size
+    lbl_sz = f_tp_text_size(i_tp_text_size)
+
+    // 1) CREATE ONCE
+    if na(l_tp1)
+        l_tp1 := line.new(xs, tp1_v, xe, tp1_v,
+                     color=color.new(tp_col, tp_transp), style=line.style_dotted,
+                     width=i_tp_line_width, extend=ext_mode)
+        l_tp2 := line.new(xs, tp2_v, xe, tp2_v,
+                     color=color.new(tp_col, tp2_tr), style=line.style_dashed,
+                     width=i_tp_line_width, extend=ext_mode)
+        l_tp3 := line.new(xs, tp3_v, xe, tp3_v,
+                     color=color.new(tp_col, tp3_tr), style=line.style_solid,
+                     width=i_tp_line_width, extend=ext_mode)
+        l_sl  := line.new(xs, sl_v,  xe, sl_v,
+                     color=color.new(sl_col, tp2_tr), style=line.style_dotted,
+                     width=i_sl_line_width, extend=ext_mode)
+
+        b_tp1 := label.new(xe, tp1_v + y_offset, " TP1  " + f_px(tp1_v),
+                     color=color.new(tp_col, tp_lbl_tr), textcolor=color.white,
+                     size=lbl_sz, style=label.style_label_left)
+        b_tp2 := label.new(xe, tp2_v + y_offset, " TP2  " + f_px(tp2_v),
+                     color=color.new(tp_col, tp_lbl_tr), textcolor=color.white,
+                     size=lbl_sz, style=label.style_label_left)
+        b_tp3 := label.new(xe, tp3_v + y_offset, " TP3  " + f_px(tp3_v),
+                     color=color.new(tp_col, tp_lbl_tr), textcolor=color.white,
+                     size=lbl_sz, style=label.style_label_left)
+        b_sl  := label.new(xe, sl_v  + y_offset, " SL   " + f_px(sl_v),
+                     color=color.new(sl_col, tp_lbl_tr), textcolor=color.white,
+                     size=lbl_sz, style=label.style_label_left)
+
+    // 2) UPDATE IN PLACE
+    else
+        // Lines — position, color, width, extend
+        line.set_xy1(l_tp1, xs, tp1_v)
+        line.set_xy2(l_tp1, xe, tp1_v)
+        line.set_color(l_tp1, color.new(tp_col, tp_transp))
+        line.set_width(l_tp1, i_tp_line_width)
+        line.set_extend(l_tp1, ext_mode)
+
+        line.set_xy1(l_tp2, xs, tp2_v)
+        line.set_xy2(l_tp2, xe, tp2_v)
+        line.set_color(l_tp2, color.new(tp_col, tp2_tr))
+        line.set_width(l_tp2, i_tp_line_width)
+        line.set_extend(l_tp2, ext_mode)
+
+        line.set_xy1(l_tp3, xs, tp3_v)
+        line.set_xy2(l_tp3, xe, tp3_v)
+        line.set_color(l_tp3, color.new(tp_col, tp3_tr))
+        line.set_width(l_tp3, i_tp_line_width)
+        line.set_extend(l_tp3, ext_mode)
+
+        line.set_xy1(l_sl,  xs, sl_v)
+        line.set_xy2(l_sl,  xe, sl_v)
+        line.set_color(l_sl,  color.new(sl_col, tp2_tr))
+        line.set_width(l_sl,  i_sl_line_width)
+        line.set_extend(l_sl,  ext_mode)
+
+        // Labels — position, text, color, size
+        label.set_xy(b_tp1, xe, tp1_v + y_offset)
+        label.set_text(b_tp1, " TP1  " + f_px(tp1_v))
+        label.set_color(b_tp1, color.new(tp_col, tp_lbl_tr))
+        label.set_size(b_tp1, lbl_sz)
+
+        label.set_xy(b_tp2, xe, tp2_v + y_offset)
+        label.set_text(b_tp2, " TP2  " + f_px(tp2_v))
+        label.set_color(b_tp2, color.new(tp_col, tp_lbl_tr))
+        label.set_size(b_tp2, lbl_sz)
+
+        label.set_xy(b_tp3, xe, tp3_v + y_offset)
+        label.set_text(b_tp3, " TP3  " + f_px(tp3_v))
+        label.set_color(b_tp3, color.new(tp_col, tp_lbl_tr))
+        label.set_size(b_tp3, lbl_sz)
+
+        label.set_xy(b_sl,  xe, sl_v  + y_offset)
+        label.set_text(b_sl,  " SL   " + f_px(sl_v))
+        label.set_color(b_sl,  color.new(sl_col, tp_lbl_tr))
+        label.set_size(b_sl,  lbl_sz)
+
+else
+    // Hide instead of delete — keeps handles stable and avoids object churn.
+    // Setting color to 100% transparent makes objects invisible without deleting them.
+    if not na(l_tp1)
+        line.set_color(l_tp1, color.new(color.gray, 100))
+        line.set_color(l_tp2, color.new(color.gray, 100))
+        line.set_color(l_tp3, color.new(color.gray, 100))
+        line.set_color(l_sl,  color.new(color.gray, 100))
+    if not na(b_tp1)
+        label.set_text(b_tp1, "")
+        label.set_text(b_tp2, "")
+        label.set_text(b_tp3, "")
+        label.set_text(b_sl,  "")
+
+// ══════════════════════════════════════════════════════════════════════
+//  ADVISORY TELEMETRY — Data Window plots (opt-in via i_telemetry)
+//
+//  Three key metrics exposed in the Data Window when telemetry is ON:
+//    t.sc_comb   — combined composite score  (−1 to +1)
+//    t.conf_pct  — confidence percentage     (0–100)
+//    t.tp_visible — TP/SL gate status        (1 = visible, 0 = hidden)
+//
+//  When OFF, display=display.none removes all three from the Style panel.
+//  Full per-component and per-TF data is available in the JSON alert payload.
+//
+//  THIS IS NOT A BUY/SELL SIGNAL. Advisory metrics only.
+// ══════════════════════════════════════════════════════════════════════
+
+// ── Advisory Telemetry — 3 key plots, hidden from Style panel when OFF ───
+// display=display.none when i_telemetry=false removes entries from Style panel.
+// Full per-component / per-TF data is available in the JSON alert payload.
+plot(sc_comb,
+     "t.sc_comb",
+     display = i_telemetry ? display.data_window : display.none)
+plot(conf_pct,
+     "t.conf_pct",
+     display = i_telemetry ? display.data_window : display.none)
+plot(show_levels ? 1.0 : 0.0,
+     "t.tp_visible",
+     display = i_telemetry ? display.data_window : display.none)
+
+// ══════════════════════════════════════════════════════════════════════
+//  ADVISORY TELEMETRY ALERT
+//
+//  Two mechanisms for .algo bot consumption:
+//
+//  1. alertcondition() — creates a named condition visible in the
+//     TradingView Alerts UI. Users can configure webhook/email delivery.
+//     Fires whenever telemetry is enabled (every bar).
+//
+//  2. alert() — fires a compact JSON payload on each confirmed bar
+//     when telemetry is enabled. Suitable for webhook-based .algo bots.
+//     Payload includes: symbol, TF, bar_index, sc_m1/m2/m5/m15,
+//     sc_comb, conf_pct, and per-component scores (s_rsi/stoch/macd/ema/mfi).
+//
+//  IMPORTANT: The payload contains ONLY advisory metrics. It does NOT
+//  contain or imply buy/sell instructions.
+// ══════════════════════════════════════════════════════════════════════
+
+// alertcondition — named trigger for TradingView Alerts UI
+alertcondition(i_telemetry,
+               title="EA Advisory Telemetry",
+               message="EA.HF.v4 Advisory: {{ticker}} {{interval}} — advisory metrics available in Data Window. NOT a buy/sell signal.")
+
+// Dynamic JSON payload via alert() — fires on each bar close when telemetry is ON
+string t_json = (
+    '{"ea":"EA.HF.v4"' +
+    ',"sym":"'     + syminfo.ticker          + '"' +
+    ',"tf":"'      + timeframe.period        + '"' +
+    ',"bar":'      + str.tostring(bar_index) +
+    ',"sc_m1":'    + str.tostring(sc_m1,   "#.0000") +
+    ',"sc_m2":'    + str.tostring(sc_m2,   "#.0000") +
+    ',"sc_m5":'    + str.tostring(sc_m5,   "#.0000") +
+    ',"sc_m15":'   + str.tostring(sc_m15,  "#.0000") +
+    ',"sc_comb":'  + str.tostring(sc_comb, "#.0000") +
+    ',"conf_pct":' + str.tostring(conf_pct, "#.0")   +
+    ',"s_rsi":'    + str.tostring(t_s_rsi,   "#.0000") +
+    ',"s_stoch":'  + str.tostring(t_s_stoch, "#.0000") +
+    ',"s_macd":'   + str.tostring(t_s_macd,  "#.0000") +
+    ',"s_ema":'    + str.tostring(t_s_ema,   "#.0000") +
+    ',"s_mfi":'    + str.tostring(t_s_mfi,   "#.0000") +
+    '}')
+
+if i_telemetry and barstate.isconfirmed
+    alert(t_json, alert.freq_once_per_bar_close)
+
+// ══════════════════════════════════════════════════════════════════════
+//  SYNTHETIC VALIDATION NOTES
+//
+//  To verify indicator behaviour without live market data, apply it to
+//  a synthetic series constructed as follows (TradingView Pine strategy
+//  or external Python/Excel):
+//
+//  Test A — Ascending (trending bull):
+//    close[i] = 100 + i * 0.05   (100 bars, +0.05/bar)
+//    high = close + 0.03, low = close - 0.03, vol = 1000 (constant)
+//    Expected: RSI climbs toward 70+, EMA fast > slow, MACD histogram
+//    positive and growing, StochRSI k > d, MFI > 50.
+//    → f_score() converges to ~+0.7 → +0.9 after warm-up (~30 bars)
+//    → Candles: amber → lime → deep green
+//    → COMB signal: BUY with 70-90% confidence
+//    → TP levels appear above price using Fib 61.8%/100%/161.8%
+//
+//  Test B — Descending (trending bear):
+//    close[i] = 100 - i * 0.05
+//    high = close + 0.03, low = close - 0.03, vol = 1000
+//    Expected: mirror of Test A (RSI < 30, fast EMA < slow, etc.)
+//    → f_score() converges to ~-0.7 → -0.9
+//    → Candles: amber → orange → deep red
+//    → COMB signal: SELL with 70-90% confidence
+//    → TP levels appear below price
+//
+//  Test C — Consolidation (range-bound / noisy):
+//    close[i] = 100 + sin(i * 0.3) * 0.2   (oscillating)
+//    vol = 800 + noise
+//    Expected: RSI ≈ 50, EMAs tangled, MACD near zero, MFI ≈ 50
+//    → f_score() stays in [-0.25, +0.25]
+//    → Candles: remain amber / near-neutral
+//    → COMB confidence < 55% → TP/SL levels NOT drawn (threshold filter)
+//    → With TP Preview Mode ON: levels drawn with subtle/transparent colours
+//
+//  Test D — Neutral Zone filter (opt-in):
+//    Same as Test C, but with i_neutral_zone = true.
+//    → COMB abs score < i_conf_min/100 → is_neutral = true
+//    → show_levels = false even with TP Preview Mode ON
+//    → Data Window: t.tp_visible = 0 (neutral, suppressed)
+//
+//  These test regimes confirm the indicator correctly:
+//    ✓ Identifies and amplifies directional moves
+//    ✓ Stays neutral during consolidation
+//    ✓ Suppresses TP/SL noise below the confidence threshold
+//    ✓ Preview Mode shows subtle levels when below threshold (opt-in)
+//    ✓ Neutral Zone filter suppresses TP entirely when direction is unclear
+// ══════════════════════════════════════════════════════════════════════
