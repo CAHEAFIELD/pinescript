@@ -289,7 +289,7 @@ float atr_val = ta.atr(i_atr_len)
 //  DASHBOARD TABLE
 // ══════════════════════════════════════════════════════════════════════
 
-// ── Pip size for distance display (mintick × 10, labelled as ticks) ──────────
+// ── Pip size for distance display (1 × syminfo.mintick, labelled as ticks) ───
 float pip_sz = syminfo.mintick
 
 //@function Format a signed pip/tick distance with compact suffix.
