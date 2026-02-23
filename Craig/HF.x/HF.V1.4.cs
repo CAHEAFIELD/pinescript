@@ -55,10 +55,10 @@
 //  • Volume:    Bars.TickVolumes is a tick-count proxy; real traded volume is
 //               unavailable in most retail cTrader feeds.  MFI may differ from
 //               Pine on tick-based brokers.
-//  • Overlay:   ATR-based TP1/TP2/TP3/SL levels are computed and printed to the
-//               telemetry log but NOT drawn on the price chart (this indicator
-//               runs as a non-overlay oscillator).  To draw price lines, split
-//               into a second IsOverlay    = true indicator or a cBot.
+//  • Overlay:   ATR-based TP1/TP2/TP3/SL levels are drawn as horizontal lines on
+//               the main price chart.  All other sub-indicators (RSI, StochRSI,
+//               MACD, EMA-cross, MFI, composite score) run as calculation-only
+//               and produce no visible plots.
 //  • Alerts:    Pine's alertcondition() has no direct equivalent; wire
 //               ExecuteMarketOrder or Chart.DrawStaticText in a cBot instead.
 //  • Repainting: Calculate() is called for each closed bar; the last bar (IsLastBar)
@@ -76,7 +76,7 @@ namespace CAHEAFIELD.HF
 {
     // Advisory oscillator — cTrader port of EA.HF Scalper v1.4 Pine Script composite score.
     [Indicator("EA.HF Scalper v1.4",
-        IsOverlay    = false,
+        IsOverlay    = true,
         AutoRescale  = false,
         AccessRights = AccessRights.None)]
     public class HFScalperV14 : Indicator
@@ -105,10 +105,6 @@ namespace CAHEAFIELD.HF
 
         [Parameter("Label Offset (pips)", DefaultValue = 2.0, MinValue = 0, Group = "TP/SL Display")]
         public double TpSlLabelOffsetPips { get; set; }
-
-        [Parameter("Show EMA (Overlay)", DefaultValue = true, Group = "Overlay Indicators")]
-        public bool ShowEmaOverlay { get; set; }
-
 
         // ── RSI (1) ──────────────────────────────────────────────────────────
         [Parameter("Length", DefaultValue = 14, MinValue = 2, MaxValue = 500, Group = "RSI (1)")]
@@ -186,49 +182,6 @@ namespace CAHEAFIELD.HF
         [Parameter("Enable Telemetry (Log)", DefaultValue = false, Group = "Telemetry")]
         public bool EnableTelemetry { get; set; }
 
-        // ── Outputs ──────────────────────────────────────────────────────────
-
-        /// <summary>Composite score normalised to [-1, +1].  Positive = bullish, negative = bearish.</summary>
-        [Output("Combined Score", LineColor = "DodgerBlue", PlotType = PlotType.Line, Thickness = 2)]
-        public IndicatorDataSeries CombinedScore { get; set; }
-
-        /// <summary>Absolute confidence in [0, 1].  Multiply by 100 for percentage.</summary>
-        [Output("Confidence (0–1)", LineColor = "Orange", PlotType = PlotType.Line, Thickness = 1)]
-        public IndicatorDataSeries Confidence { get; set; }
-
-        
-
-        [Output("EMA Overlay", LineColor = "Aqua", PlotType = PlotType.Line, Thickness = 1)]
-        public IndicatorDataSeries EmaOverlay { get; set; }
-/// <summary>Positive signal-threshold level (constant horizontal line).</summary>
-        [Output("Threshold +", LineColor = "Green", PlotType = PlotType.Line, LineStyle = LineStyle.Lines, Thickness = 1)]
-        public IndicatorDataSeries ThresholdPos { get; set; }
-
-        /// <summary>Negative signal-threshold level (constant horizontal line).</summary>
-        [Output("Threshold –", LineColor = "Red", PlotType = PlotType.Line, LineStyle = LineStyle.Lines, Thickness = 1)]
-        public IndicatorDataSeries ThresholdNeg { get; set; }
-
-        // Per-component scores — dotted lines for diagnostic use.
-        /// <summary>RSI component score in [-1, +1].</summary>
-        [Output("Score · RSI",      LineColor = "MediumPurple", PlotType = PlotType.Line, LineStyle = LineStyle.DotsRare, Thickness = 1)]
-        public IndicatorDataSeries ScoreRsi { get; set; }
-
-        /// <summary>StochRSI component score in [-1, +1].</summary>
-        [Output("Score · StochRSI", LineColor = "HotPink",      PlotType = PlotType.Line, LineStyle = LineStyle.DotsRare, Thickness = 1)]
-        public IndicatorDataSeries ScoreStochRsi { get; set; }
-
-        /// <summary>MACD component score in {-1, -0.3, 0, +0.3, +1}.</summary>
-        [Output("Score · MACD",     LineColor = "Yellow",        PlotType = PlotType.Line, LineStyle = LineStyle.DotsRare, Thickness = 1)]
-        public IndicatorDataSeries ScoreMacd { get; set; }
-
-        /// <summary>EMA-cross component score in [-1, +1].</summary>
-        [Output("Score · EMA",      LineColor = "Cyan",          PlotType = PlotType.Line, LineStyle = LineStyle.DotsRare, Thickness = 1)]
-        public IndicatorDataSeries ScoreEma { get; set; }
-
-        /// <summary>MFI component score in [-1, +1].</summary>
-        [Output("Score · MFI",      LineColor = "Coral",         PlotType = PlotType.Line, LineStyle = LineStyle.DotsRare, Thickness = 1)]
-        public IndicatorDataSeries ScoreMfi { get; set; }
-
         // ── Private indicator references ─────────────────────────────────────
         private RelativeStrengthIndex    _rsi;
         private RelativeStrengthIndex    _stochRsiBase;  // RSI fed into the Stochastic formula
@@ -261,32 +214,8 @@ namespace CAHEAFIELD.HF
         // ════════════════════════════════════════════════════════════════════
         public override void Calculate(int index)
         {
-            // EMA overlay series (optional)
-            if (ShowEmaOverlay)
-            {
-                var ema = Indicators.ExponentialMovingAverage(Bars.ClosePrices, EmaFastLen).Result[index];
-                EmaOverlay[index] = ema;
-            }
-            else
-            {
-                EmaOverlay[index] = double.NaN;
-            }
-
-            double threshNorm = SignalThresholdPct / 100.0;
-            ThresholdPos[index] =  threshNorm;
-            ThresholdNeg[index] = -threshNorm;
-
             if (index < _warmup)
-            {
-                CombinedScore[index] = 0;
-                Confidence[index]    = 0;
-                ScoreRsi[index]      = 0;
-                ScoreStochRsi[index] = 0;
-                ScoreMacd[index]     = 0;
-                ScoreEma[index]      = 0;
-                ScoreMfi[index]      = 0;
                 return;
-            }
 
             // ── 1. RSI  (weight 1.0) ──────────────────────────────────────────
             // Pine: s_rsi = clamp((rsi14 - 50) / 50, -1, 1)
@@ -337,40 +266,36 @@ namespace CAHEAFIELD.HF
             double combined   = Clamp(raw / 6.0, -1.0, 1.0);
             double confidence = Math.Abs(combined); // 0–1; ×100 = confidence %
 
-            CombinedScore[index] = combined;
-            Confidence[index]    = confidence;
-            ScoreRsi[index]      = scoreRsi;
-            ScoreStochRsi[index] = scoreStochRsi;
-            ScoreMacd[index]     = scoreMacd;
-            ScoreEma[index]      = scoreEma;
-            ScoreMfi[index]      = scoreMfi;
-
-            // ── Telemetry log (last bar only, when enabled) ───────────────────
-            if (EnableTelemetry && IsLastBar)
+            // ── TP/SL overlay on main price chart (last bar only) ─────────────
+            if (IsLastBar)
             {
-                double pipSz   = GetPipSize();
                 double atrVal  = _atr.Result[index];
                 double close   = Bars.ClosePrices[index];
                 double confPct = confidence * 100.0;
 
-                bool   isBull = combined >= 0.0;
-                // Express TP/SL as signed pip distances from current close.
+                bool   isBull  = combined >= 0.0;
                 double slPips  = (isBull ? -SlMult  : SlMult)  * PriceToPips(atrVal);
                 double tp1Pips = (isBull ?  Tp1Mult : -Tp1Mult) * PriceToPips(atrVal);
                 double tp2Pips = (isBull ?  Tp2Mult : -Tp2Mult) * PriceToPips(atrVal);
                 double tp3Pips = (isBull ?  Tp3Mult : -Tp3Mult) * PriceToPips(atrVal);
 
-                string dir = isBull ? "▲ BUY" : "▼ SELL";
+                DrawTpSlOverlay(index, close, combined, confPct, tp1Pips, tp2Pips, tp3Pips, slPips);
 
-                Print(
-                    $"[HF v1.4 | {Bars.OpenTimes[index]:yyyy-MM-dd HH:mm}] {dir}  " +
-                    $"Combined={combined:+0.000;-0.000;0.000}  Conf={confPct:0.0}%  " +
-                    $"| RSI={scoreRsi:+0.000;-0.000}  StochRSI={scoreStochRsi:+0.000;-0.000}  " +
-                    $"MACD={scoreMacd:+0.000;-0.000}  EMA={scoreEma:+0.000;-0.000}  MFI={scoreMfi:+0.000;-0.000}  " +
-                    $"| ATR={PriceToPips(atrVal):0.1}p  SL={slPips:+0.1;-0.1}p  TP1={tp1Pips:+0.1}p  TP2={tp2Pips:+0.1}p  TP3={tp3Pips:+0.1}p");
+                // ── Telemetry log (when enabled) ─────────────────────────────
+                if (EnableTelemetry)
+                {
+                    string dir = isBull ? "▲ BUY" : "▼ SELL";
 
-                if (confPct >= SignalThresholdPct)
-                    Print($"[HF v1.4] *** ADVISORY SIGNAL: {dir}  confidence {confPct:0.0}% ***");
+                    Print(
+                        $"[HF v1.4 | {Bars.OpenTimes[index]:yyyy-MM-dd HH:mm}] {dir}  " +
+                        $"Combined={combined:+0.000;-0.000;0.000}  Conf={confPct:0.0}%  " +
+                        $"| RSI={scoreRsi:+0.000;-0.000}  StochRSI={scoreStochRsi:+0.000;-0.000}  " +
+                        $"MACD={scoreMacd:+0.000;-0.000}  EMA={scoreEma:+0.000;-0.000}  MFI={scoreMfi:+0.000;-0.000}  " +
+                        $"| ATR={PriceToPips(atrVal):0.1}p  SL={slPips:+0.1;-0.1}p  TP1={tp1Pips:+0.1}p  TP2={tp2Pips:+0.1}p  TP3={tp3Pips:+0.1}p");
+
+                    if (confPct >= SignalThresholdPct)
+                        Print($"[HF v1.4] *** ADVISORY SIGNAL: {dir}  confidence {confPct:0.0}% ***");
+                }
             }
         }
 
