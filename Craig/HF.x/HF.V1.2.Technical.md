@@ -800,21 +800,33 @@ namespace cAlgo
             int stochLen = 14, kSmooth = 3;
             var rsiInd = Indicators.RelativeStrengthIndex(series.Close, 14);
             int count  = rsiInd.Result.Count;
-            if (count < stochLen + kSmooth) return 0;
+            // Need enough data to compute a stochLen-window for each of the last kSmooth bars
+            if (count < stochLen + kSmooth - 1) return 0;
 
-            double highest = double.MinValue, lowest = double.MaxValue;
-            for (int i = 0; i < stochLen; i++)
+            double kSm = 0.0;
+
+            // Smooth k_raw values (Stochastic RSI) over the last kSmooth bars
+            for (int i = 0; i < kSmooth; i++)
             {
-                double v = rsiInd.Result[count - 1 - i];
-                if (v > highest) highest = v;
-                if (v < lowest)  lowest  = v;
-            }
-            double range = highest - lowest;
-            if (range < 1e-10) return 0;
+                int idx = count - 1 - i; // current bar index for this k_raw
 
-            double kRaw = 100.0 * (rsiInd.Result.LastValue - lowest) / range;
-            double kSm  = 0;
-            for (int i = 0; i < kSmooth; i++) kSm += rsiInd.Result[count - 1 - i];
+                double highest = double.MinValue, lowest = double.MaxValue;
+                for (int j = 0; j < stochLen; j++)
+                {
+                    double v = rsiInd.Result[idx - j];
+                    if (v > highest) highest = v;
+                    if (v < lowest)  lowest  = v;
+                }
+
+                double range = highest - lowest;
+                double kRaw;
+                if (range < 1e-10)
+                    kRaw = 0.0;
+                else
+                    kRaw = 100.0 * (rsiInd.Result[idx] - lowest) / range;
+
+                kSm += kRaw;
+            }
             kSm /= kSmooth;
 
             return Clamp((kSm - 50.0) / 50.0, -1, 1);
