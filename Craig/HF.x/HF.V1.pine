@@ -130,8 +130,8 @@ f_score() =>
     float s_ema   = math.max(-1.0, math.min(1.0, spread))
 
     // ── 5. Money Flow Index (weight 0.8) ──────────────────────────────
-    float mfi14   = ta.mfi(hlc3, i_mfi_len)
-    float s_mfi   = math.max(-1.0, math.min(1.0, (mfi14 - 50.0) / 50.0))
+    float mfi_val = ta.mfi(hlc3, i_mfi_len)
+    float s_mfi   = math.max(-1.0, math.min(1.0, (mfi_val - 50.0) / 50.0))
 
     // ── Weighted sum, normalised to [-1, +1] ──────────────────────────
     float raw = (s_rsi   * 1.0 +
