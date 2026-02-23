@@ -1,7 +1,7 @@
 // The MIT License (MIT)
 // © CAHEAFIELD
 //
-// EA.HF Scalper v4 — Multi-Timeframe High-Frequency Scalping Indicator
+// EA.HF Scalper v1.4 — Multi-Timeframe High-Frequency Scalping Indicator
 // Designed for 1m – 15m charts
 //
 // ┌─ CONFLUENCED INDICATORS (run in background) ───────────────────────┐
@@ -38,13 +38,21 @@
 //         – Single Telemetry toggle gates all Data Window plots; i_tp_debug removed (req 7)
 //         – Debug plot names normalised to dbg_* prefix (req 8)
 //         – No delete/recreate; line.set_width/extend + label.set_size in update block
-//   V4 (this file):
+//   V4:
 //         – Telemetry plots consolidated to 3 (sc_comb, conf_pct, tp_visible);
 //           all use display=display.none when OFF (clears Style panel clutter)
 //         – Telemetry input label → "Enable Telemetry (Data Window)"
 //         – TP/SL labels shifted above their lines via i_label_y_ticks offset
 //         – Default TP line width → 3, default SL line width → 3
 //         – Dashboard pips row: TP1/TP2/TP3/SL distance from close in ticks
+//   V1.4 (this file, renamed from HF.V4.pine):
+//         – Three UI inputs hidden via display=display.none (Neutral Zone Filter,
+//           Fib Target Sanity Check, Enable Telemetry); logic unchanged
+//         – TP summary text color changed to white; ATR row removed from dashboard
+//         – Symbol-aware pip sizing: Auto (forex = mintick×10, others = mintick)
+//           or Override mode; distances displayed with "p" suffix for pips
+//         – Per-line TP1/TP2/TP3/SL independent width, style, and color controls
+//           replacing the previous shared i_tp_line_width / i_tp_color inputs
 //
 // ADVISORY NOTE:
 //   This indicator is NOT a definitive buy/sell system.
@@ -56,7 +64,7 @@
 //   Flat/noise series → score stays near  0    (low confidence, no TP shown)
 
 //@version=6
-indicator("EA.HF Scalper v4", "EA.HF.v4", overlay=true, max_lines_count=50, max_labels_count=50)
+indicator("EA.HF Scalper v1.4", "EA.HF.v1.4", overlay=true, max_lines_count=50, max_labels_count=50)
 
 // ══════════════════════════════════════════════════════════════════════
 //  INPUTS
@@ -94,18 +102,31 @@ i_tp_text_size  = input.string("Small",     "TP/SL Text Size",
                               options=["Tiny","Small","Normal","Large"],
                               group="TP / SL Display",
                               tooltip="Text size for TP1/TP2/TP3/SL labels.")
-i_tp_line_width = input.int(3,              "TP Line Width",
-                              minval=1, maxval=5,
-                              group="TP / SL Display")
-i_sl_line_width = input.int(3,              "SL Line Width",
-                              minval=1, maxval=5,
-                              group="TP / SL Display")
-i_tp_color      = input.color(color.new(#00C853, 0), "TP Base Color",
+i_tp1_width  = input.int(3,   "TP1 Line Width",  minval=1, maxval=5, group="TP / SL Display")
+i_tp1_style  = input.string("dotted", "TP1 Line Style", options=["solid","dashed","dotted"], group="TP / SL Display")
+i_tp1_color  = input.color(color.new(#00C853, 0), "TP1 Color", group="TP / SL Display")
+
+i_tp2_width  = input.int(3,   "TP2 Line Width",  minval=1, maxval=5, group="TP / SL Display")
+i_tp2_style  = input.string("dashed", "TP2 Line Style", options=["solid","dashed","dotted"], group="TP / SL Display")
+i_tp2_color  = input.color(color.new(#00C853, 0), "TP2 Color", group="TP / SL Display")
+
+i_tp3_width  = input.int(3,   "TP3 Line Width",  minval=1, maxval=5, group="TP / SL Display")
+i_tp3_style  = input.string("solid",  "TP3 Line Style", options=["solid","dashed","dotted"], group="TP / SL Display")
+i_tp3_color  = input.color(color.new(#00C853, 0), "TP3 Color", group="TP / SL Display")
+
+i_sl_width   = input.int(3,   "SL Line Width",   minval=1, maxval=5, group="TP / SL Display")
+i_sl_style   = input.string("dotted", "SL Line Style",  options=["solid","dashed","dotted"], group="TP / SL Display")
+i_sl_color   = input.color(color.new(#FF3D3D, 0), "SL Color", group="TP / SL Display", tooltip="Color for SL line and bear-direction TP lines.")
+
+i_pip_mode     = input.string("Auto",           "Pip Size Mode",
+                              options=["Auto","Override"],
                               group="TP / SL Display",
-                              tooltip="Base color for TP lines (bull direction). Bear direction uses SL Color.")
-i_sl_color      = input.color(color.new(#FF3D3D, 0), "SL Color",
+                              tooltip="Auto: infer pip size from symbol type (forex = mintick×10, others = mintick). Override: use the value below.")
+i_pip_override = input.float(0.0001,            "Pip Size Override",
+                              minval=0.0000001, step=syminfo.mintick,
                               group="TP / SL Display",
-                              tooltip="Color for SL line and bear-direction TP lines.")
+                              tooltip="Only used when Pip Size Mode = Override. Set to your broker's pip size for this instrument.")
+
 i_extend_left   = input.bool(false,         "Extend TP/SL Lines Left",
                               group="TP / SL Display",
                               tooltip="When ON: lines extend in both directions (extend.both). Default OFF: extend.right only.")
@@ -150,14 +171,17 @@ i_tp_lookb     = input.int(20,    "Range Lookback (Fib Window)", minval=5,
                               tooltip="Number of bars used to identify the recent swing high/low range for Fibonacci TP extensions. Previously labelled 'Pivot Lookback'; uses ta.highest/ta.lowest rolling window — not true swing pivots.")
 i_neutral_zone = input.bool(false, "Neutral Zone Filter",
                               group="TP / SL",
+                              display=display.none,
                               tooltip="When ON: only treat direction as bull/bear when abs(sc_comb) >= Signal Threshold. Signals below threshold are classified as 'neutral' and TP lines are suppressed. Default OFF preserves existing behaviour.")
 i_fib_sanity   = input.bool(false, "Fib Target Sanity Check",
                               group="TP / SL",
+                              display=display.none,
                               tooltip="When ON: ensures Fibonacci TP targets are ahead of current price (bull targets > close, bear targets < close). If a Fib target is on the wrong side, the ATR floor is used instead. Default OFF.")
 
 // ── Telemetry ──────────────────────────────────────────────────────────
 i_telemetry = input.bool(false, "Enable Telemetry (Data Window)",
                               group="Telemetry",
+                              display=display.none,
                               tooltip="When ON: exposes combined score, confidence %, and TP-visibility flag in the Data Window. Also fires a JSON alert on each confirmed bar for .algo bot consumption. Advisory metrics only — NOT a buy/sell signal.")
 
 // ══════════════════════════════════════════════════════════════════════
@@ -176,6 +200,12 @@ f_tp_text_size(string s) =>
      s == "Normal" ? size.normal :
      s == "Large"  ? size.large  :
                      size.small)
+
+//@function Map user-facing line style string to Pine line.style_* constant.
+f_line_style(string s) =>
+    (s == "solid"  ? line.style_solid  :
+     s == "dashed" ? line.style_dashed :
+                     line.style_dotted)
 
 // ══════════════════════════════════════════════════════════════════════
 //  COMPOSITE SIGNAL FUNCTION
@@ -289,13 +319,19 @@ float atr_val = ta.atr(i_atr_len)
 //  DASHBOARD TABLE
 // ══════════════════════════════════════════════════════════════════════
 
-// ── Pip size for distance display (1 × syminfo.mintick, labelled as ticks) ───
-float pip_sz = syminfo.mintick
+// ── Pip size for distance display (symbol-aware, Auto or Override) ─────────
+// Auto mode: forex → mintick × 10 (covers 5-digit and 3-digit FX pairs)
+//            non-forex → mintick (displayed as ticks)
+// Override mode: user-supplied pip_size applied directly.
+bool   _is_forex = syminfo.type == "forex"
+float  _auto_pip = _is_forex ? syminfo.mintick * 10.0 : syminfo.mintick
+float  pip_sz    = i_pip_mode == "Override" ? i_pip_override : _auto_pip
+string pip_sfx   = (i_pip_mode == "Override" or _is_forex) ? "p" : "tk"
 
-//@function Format a signed pip/tick distance with compact suffix.
+//@function Format a signed pip/tick distance with symbol-aware suffix.
 f_pdist(float v) =>
     string sgn = v >= 0.0 ? "+" : "-"
-    sgn + str.tostring(math.round(math.abs(v))) + "tk"
+    sgn + str.tostring(math.abs(v), "#.#") + pip_sfx
 
 //@function Convert a raw score to display values.
 //@param sc  Raw score in [-1.0, +1.0]
@@ -331,7 +367,7 @@ if i_show_table and barstate.islast
     tpos   = f_tbl_pos(i_tbl_pos)
     tbl_sz = f_tbl_size(i_tbl_size)
 
-    tbl := table.new(tpos, 3, 9,
+    tbl := table.new(tpos, 3, 8,
          bgcolor      = color.new(#0A0A14, 8),
          border_color = color.new(#2A2A40, 0),
          border_width = 1,
@@ -339,7 +375,7 @@ if i_show_table and barstate.islast
          frame_width  = 1)
 
     // ── Row 0: Title ──────────────────────────────────────────────────
-    table.cell(tbl, 0, 0, "⚡  EA.HF SCALPER V4",
+    table.cell(tbl, 0, 0, "⚡  EA.HF SCALPER V1.4",
          text_color=color.white, text_size=tbl_sz,
          bgcolor=#1A1A3E, text_halign=text.align_center)
     table.merge_cells(tbl, 0, 0, 2, 0)
@@ -405,16 +441,8 @@ if i_show_table and barstate.islast
          text_color=d_col_com, text_size=tbl_sz, bgcolor=com_bg,
          text_halign=text.align_right)
 
-    // ── Row 7: TP/SL pips distance footer — populated after TP math (see below)
+    // ── Row 7: TP/SL pips distance footer (last row) ──────────────────
     // Row 7 cells are set in a second if block after tp1_v/sl_v are computed.
-
-    // ── Row 8: ATR footer ─────────────────────────────────────────────
-    table.cell(tbl, 0, 8, "ATR(" + str.tostring(i_atr_len) + ")",
-         text_color=#444455, text_size=tbl_sz, bgcolor=#060610)
-    table.cell(tbl, 1, 8, str.tostring(atr_val, format.mintick),
-         text_color=#444455, text_size=tbl_sz, bgcolor=#060610,
-         text_halign=text.align_center)
-    table.merge_cells(tbl, 1, 8, 2, 8)
 
 // ══════════════════════════════════════════════════════════════════════
 //  TAKE PROFIT / STOP LOSS LEVELS
@@ -497,7 +525,7 @@ if i_show_table and barstate.islast and not na(tbl)
         "  TP3 " + f_pdist(_tp3p) +
         "  SL " + f_pdist(_slp))
     table.cell(tbl, 0, 7, pips_txt,
-         text_color=#556677, text_size=f_tbl_size(i_tbl_size), bgcolor=#060610,
+         text_color=color.white, text_size=f_tbl_size(i_tbl_size), bgcolor=#060610,
          text_halign=text.align_center)
     table.merge_cells(tbl, 0, 7, 2, 7)
 
@@ -542,88 +570,95 @@ if show_levels
     int tp2_tr    = is_preview ? 60 : 30
     int tp3_tr    = is_preview ? 40 : 10
 
-    // Directional colors: bull uses i_tp_color, bear uses i_sl_color for TP lines.
-    // SL is always i_sl_color.
-    color tp_col  = is_bull ? i_tp_color : i_sl_color
-    color sl_col  = i_sl_color
-
     // Resolved label text size
     lbl_sz = f_tp_text_size(i_tp_text_size)
 
     // 1) CREATE ONCE
     if na(l_tp1)
+        // Per-line directional colors: bull uses tp_col variant, bear uses sl_col
+        color tp1c = is_bull ? i_tp1_color : i_sl_color
+        color tp2c = is_bull ? i_tp2_color : i_sl_color
+        color tp3c = is_bull ? i_tp3_color : i_sl_color
         l_tp1 := line.new(xs, tp1_v, xe, tp1_v,
-                     color=color.new(tp_col, tp_transp), style=line.style_dotted,
-                     width=i_tp_line_width, extend=ext_mode)
+                     color=color.new(tp1c, tp_transp), style=f_line_style(i_tp1_style),
+                     width=i_tp1_width, extend=ext_mode)
         l_tp2 := line.new(xs, tp2_v, xe, tp2_v,
-                     color=color.new(tp_col, tp2_tr), style=line.style_dashed,
-                     width=i_tp_line_width, extend=ext_mode)
+                     color=color.new(tp2c, tp2_tr), style=f_line_style(i_tp2_style),
+                     width=i_tp2_width, extend=ext_mode)
         l_tp3 := line.new(xs, tp3_v, xe, tp3_v,
-                     color=color.new(tp_col, tp3_tr), style=line.style_solid,
-                     width=i_tp_line_width, extend=ext_mode)
+                     color=color.new(tp3c, tp3_tr), style=f_line_style(i_tp3_style),
+                     width=i_tp3_width, extend=ext_mode)
         l_sl  := line.new(xs, sl_v,  xe, sl_v,
-                     color=color.new(sl_col, tp2_tr), style=line.style_dotted,
-                     width=i_sl_line_width, extend=ext_mode)
+                     color=color.new(i_sl_color, tp2_tr), style=f_line_style(i_sl_style),
+                     width=i_sl_width, extend=ext_mode)
 
         b_tp1 := label.new(xe, tp1_v + y_offset, " TP1  " + f_px(tp1_v),
-                     color=color.new(tp_col, tp_lbl_tr), textcolor=color.white,
+                     color=color.new(tp1c, tp_lbl_tr), textcolor=color.white,
                      size=lbl_sz, style=label.style_label_left)
         b_tp2 := label.new(xe, tp2_v + y_offset, " TP2  " + f_px(tp2_v),
-                     color=color.new(tp_col, tp_lbl_tr), textcolor=color.white,
+                     color=color.new(tp2c, tp_lbl_tr), textcolor=color.white,
                      size=lbl_sz, style=label.style_label_left)
         b_tp3 := label.new(xe, tp3_v + y_offset, " TP3  " + f_px(tp3_v),
-                     color=color.new(tp_col, tp_lbl_tr), textcolor=color.white,
+                     color=color.new(tp3c, tp_lbl_tr), textcolor=color.white,
                      size=lbl_sz, style=label.style_label_left)
         b_sl  := label.new(xe, sl_v  + y_offset, " SL   " + f_px(sl_v),
-                     color=color.new(sl_col, tp_lbl_tr), textcolor=color.white,
+                     color=color.new(i_sl_color, tp_lbl_tr), textcolor=color.white,
                      size=lbl_sz, style=label.style_label_left)
 
     // 2) UPDATE IN PLACE
     else
-        // Lines — position, color, width, extend
+        // Per-line directional colors
+        color tp1c = is_bull ? i_tp1_color : i_sl_color
+        color tp2c = is_bull ? i_tp2_color : i_sl_color
+        color tp3c = is_bull ? i_tp3_color : i_sl_color
+        // Lines — position, color, width, style, extend
         line.set_xy1(l_tp1, xs, tp1_v)
         line.set_xy2(l_tp1, xe, tp1_v)
-        line.set_color(l_tp1, color.new(tp_col, tp_transp))
-        line.set_width(l_tp1, i_tp_line_width)
+        line.set_color(l_tp1, color.new(tp1c, tp_transp))
+        line.set_width(l_tp1, i_tp1_width)
+        line.set_style(l_tp1, f_line_style(i_tp1_style))
         line.set_extend(l_tp1, ext_mode)
 
         line.set_xy1(l_tp2, xs, tp2_v)
         line.set_xy2(l_tp2, xe, tp2_v)
-        line.set_color(l_tp2, color.new(tp_col, tp2_tr))
-        line.set_width(l_tp2, i_tp_line_width)
+        line.set_color(l_tp2, color.new(tp2c, tp2_tr))
+        line.set_width(l_tp2, i_tp2_width)
+        line.set_style(l_tp2, f_line_style(i_tp2_style))
         line.set_extend(l_tp2, ext_mode)
 
         line.set_xy1(l_tp3, xs, tp3_v)
         line.set_xy2(l_tp3, xe, tp3_v)
-        line.set_color(l_tp3, color.new(tp_col, tp3_tr))
-        line.set_width(l_tp3, i_tp_line_width)
+        line.set_color(l_tp3, color.new(tp3c, tp3_tr))
+        line.set_width(l_tp3, i_tp3_width)
+        line.set_style(l_tp3, f_line_style(i_tp3_style))
         line.set_extend(l_tp3, ext_mode)
 
         line.set_xy1(l_sl,  xs, sl_v)
         line.set_xy2(l_sl,  xe, sl_v)
-        line.set_color(l_sl,  color.new(sl_col, tp2_tr))
-        line.set_width(l_sl,  i_sl_line_width)
+        line.set_color(l_sl,  color.new(i_sl_color, tp2_tr))
+        line.set_width(l_sl,  i_sl_width)
+        line.set_style(l_sl,  f_line_style(i_sl_style))
         line.set_extend(l_sl,  ext_mode)
 
         // Labels — position, text, color, size
         label.set_xy(b_tp1, xe, tp1_v + y_offset)
         label.set_text(b_tp1, " TP1  " + f_px(tp1_v))
-        label.set_color(b_tp1, color.new(tp_col, tp_lbl_tr))
+        label.set_color(b_tp1, color.new(tp1c, tp_lbl_tr))
         label.set_size(b_tp1, lbl_sz)
 
         label.set_xy(b_tp2, xe, tp2_v + y_offset)
         label.set_text(b_tp2, " TP2  " + f_px(tp2_v))
-        label.set_color(b_tp2, color.new(tp_col, tp_lbl_tr))
+        label.set_color(b_tp2, color.new(tp2c, tp_lbl_tr))
         label.set_size(b_tp2, lbl_sz)
 
         label.set_xy(b_tp3, xe, tp3_v + y_offset)
         label.set_text(b_tp3, " TP3  " + f_px(tp3_v))
-        label.set_color(b_tp3, color.new(tp_col, tp_lbl_tr))
+        label.set_color(b_tp3, color.new(tp3c, tp_lbl_tr))
         label.set_size(b_tp3, lbl_sz)
 
         label.set_xy(b_sl,  xe, sl_v  + y_offset)
         label.set_text(b_sl,  " SL   " + f_px(sl_v))
-        label.set_color(b_sl,  color.new(sl_col, tp_lbl_tr))
+        label.set_color(b_sl,  color.new(i_sl_color, tp_lbl_tr))
         label.set_size(b_sl,  lbl_sz)
 
 else
@@ -688,11 +723,11 @@ plot(show_levels ? 1.0 : 0.0,
 // alertcondition — named trigger for TradingView Alerts UI
 alertcondition(i_telemetry,
                title="EA Advisory Telemetry",
-               message="EA.HF.v4 Advisory: {{ticker}} {{interval}} — advisory metrics available in Data Window. NOT a buy/sell signal.")
+               message="EA.HF.v1.4 Advisory: {{ticker}} {{interval}} — advisory metrics available in Data Window. NOT a buy/sell signal.")
 
 // Dynamic JSON payload via alert() — fires on each bar close when telemetry is ON
 string t_json = (
-    '{"ea":"EA.HF.v4"' +
+    '{"ea":"EA.HF.v1.4"' +
     ',"sym":"'     + syminfo.ticker          + '"' +
     ',"tf":"'      + timeframe.period        + '"' +
     ',"bar":'      + str.tostring(bar_index) +

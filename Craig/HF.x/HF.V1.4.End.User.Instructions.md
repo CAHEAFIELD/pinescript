@@ -1,6 +1,6 @@
 # EA.HF Scalper v1.4 — End User Instructions
 
-> **Version:** 1.4 · **Pine file:** `HF.V4.pine` · **Platform:** TradingView (Pine Script v6) · **Designed for:** 1m – 15m scalping
+> **Version:** 1.4 · **Pine file:** `HF.V1.4.pine` · **Platform:** TradingView (Pine Script v6) · **Designed for:** 1m – 15m scalping
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Version | Summary |
 |---------|---------|
-| **v1.4** | Style panel clutter removed (telemetry plots consolidated, hidden when OFF); TP/SL labels shifted above lines via tick offset; default line widths 3/3; dashboard pips distance row |
+| **v1.4** | Per-line TP1/TP2/TP3/SL width/style/color controls; symbol-aware pip sizing (FX=pips with "p", non-FX=ticks with "tk", Override available); ATR row removed from dashboard; TP summary text color → white; three settings hidden from UI (Neutral Zone Filter, Fib Sanity Check, Enable Telemetry); file renamed to HF.V1.4.pine |
 | v1.3 | Dashboard size control; TP/SL line style inputs; single telemetry toggle |
 | v1.2 | TP Preview Mode; Neutral Zone filter; Fib Target Sanity check |
 | v1.1 | Compiler fixes |
@@ -61,7 +61,7 @@ Five indicators run silently in the background and vote on direction and strengt
 
 1. Open TradingView and navigate to **Pine Script Editor** (bottom toolbar).
 2. Delete any default code in the editor.
-3. Paste the full contents of `HF.V4.pine`.
+3. Paste the full contents of `HF.V1.4.pine`.
 4. Click **Save** (give it a name, e.g. *EA.HF Scalper v1.4*).
 5. Click **Add to chart**.
 
@@ -90,19 +90,19 @@ Recommended: **M1, M2, M5**. Works well on M15.
 ╠══════╬══════════════════╬═══════════════════╣
 ║ COMB ║     ▲  BUY       ║      60.8%        ║
 ╠══════╩══════════════════╩═══════════════════╣
-║  TP1 +125tk  TP2 +231tk  TP3 +375tk  SL -82tk  ║   ← new in v1.4
-╠═════════════════════════════════════════════╣
-║ ATR(14):              0.00041               ║
+║  TP1 +12.5p  TP2 +23.1p  TP3 +37.5p  SL -8.2p  ║
 ╚═════════════════════════════════════════════╝
 ```
 
-### Pips distance row (new in v1.4)
+### Pips distance row
 
-The row beneath COMB shows the **tick distance** from the current close to each TP and SL level.
+The row beneath COMB shows the **distance** from the current close to each TP and SL level.
 
 - Positive values = levels above current price (typical for bull TP targets)
 - Negative values = levels below current price (typical for bull SL, bear TP targets)
-- Unit: `tk` = ticks (multiples of `syminfo.mintick`)
+- **On FX symbols (forex):** distances expressed in **pips** (mintick × 10), shown with `"p"` suffix
+- **On non-FX symbols:** distances expressed in **ticks** (mintick), shown with `"tk"` suffix
+- **Pip Size Override:** set Pip Size Mode to "Override" and enter a custom Pip Size Override value — result is always shown with `"p"` suffix
 - This is display-only; the TP/SL calculation is unchanged
 
 ---
@@ -133,17 +133,26 @@ PRICE ──●
         ·  ·  ·  ·  ·  ·  ·  [SL  label above line]  ← dotted red (width=3)
 ```
 
-### New in v1.4 — Labels above lines
+### Labels above lines
 
-Labels are now placed **above** each line by a configurable tick offset.
+Labels are placed **above** each line by a configurable tick offset.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | TP/SL Label Vertical Offset (ticks) | **10** | Ticks above the line where the label box sits. Increase for wider spacing. |
 
-### New in v1.4 — Default line widths
+### Per-line TP/SL controls (new in v1.4)
 
-Both TP and SL default to **width=3** (previously TP=2, SL=1). Users may adjust via the TP/SL Display settings.
+Each of TP1, TP2, TP3, and SL now has **independent** width, style, and color settings:
+
+| Line | Width setting | Style setting | Color setting |
+|------|---------------|---------------|---------------|
+| TP1 | TP1 Line Width | TP1 Line Style | TP1 Color |
+| TP2 | TP2 Line Width | TP2 Line Style | TP2 Color |
+| TP3 | TP3 Line Width | TP3 Line Style | TP3 Color |
+| SL  | SL Line Width  | SL Line Style  | SL Color  |
+
+The previous shared "TP Line Width", "SL Line Width", "TP Base Color", and "SL Color" inputs have been removed.
 
 ---
 
@@ -171,19 +180,31 @@ Both TP and SL default to **width=3** (previously TP=2, SL=1). Users may adjust 
 |---------|---------|-------|
 | TP/SL Preview Mode | OFF | Draw below threshold in subtle colours |
 | TP/SL Text Size | Small | Tiny / Small / Normal / Large |
-| TP Line Width | **3** | TP1/TP2/TP3 thickness (1–5) |
+| TP1 Line Width | **3** | TP1 thickness (1–5) |
+| TP1 Line Style | dotted | solid / dashed / dotted |
+| TP1 Color | Green | TP1 line color |
+| TP2 Line Width | **3** | TP2 thickness (1–5) |
+| TP2 Line Style | dashed | solid / dashed / dotted |
+| TP2 Color | Green | TP2 line color |
+| TP3 Line Width | **3** | TP3 thickness (1–5) |
+| TP3 Line Style | solid | solid / dashed / dotted |
+| TP3 Color | Green | TP3 line color |
 | SL Line Width | **3** | SL thickness (1–5) |
-| TP Base Color | Green | Bull TP color |
-| SL Color | Red | SL and bear TP color |
+| SL Line Style | dotted | solid / dashed / dotted |
+| SL Color | Red | SL line color |
 | Extend TP/SL Lines Left | OFF | Extend both directions |
 | TP/SL Label Indent (bars) | 20 | Bars right of last bar |
-| TP/SL Label Vertical Offset (ticks) | **10** | Ticks above line for label box **(new)** |
+| TP/SL Label Vertical Offset (ticks) | **10** | Ticks above line for label box |
+| Pip Size Mode | Auto | "Auto" = symbol-aware; "Override" = use custom value |
+| Pip Size Override | 0.0001 | Custom pip size; active only when Pip Size Mode = Override |
 
 ### Telemetry
 
 | Setting | Default | Notes |
 |---------|---------|-------|
-| Enable Telemetry (Data Window) | OFF | Master toggle. When OFF: 0 Style panel entries. When ON: 3 Data Window plots. |
+| Enable Telemetry (Data Window) | OFF | *(hidden — not visible in Settings UI)* Master toggle. When OFF: 0 Style panel entries. When ON: 3 Data Window plots. |
+
+> **Note:** Three settings are **not visible in the normal Settings UI** because they are marked hidden in the script: **Neutral Zone Filter**, **Fib Target Sanity Check**, and **Enable Telemetry**. They remain functional — they can be enabled via direct script editing or automation.
 
 ---
 
@@ -214,12 +235,13 @@ Enable **Enable Telemetry (Data Window)** in the Telemetry group.
 | `t.tp_visible` | TP/SL gate status (1 = visible, 0 = hidden) |
 
 - Full per-component and per-TF data is still available in the **JSON alert payload** (unchanged).
+- The **Enable Telemetry** toggle is hidden from the Settings UI; it can be enabled via direct script editing or automation.
 
 ### JSON alert payload (unchanged)
 
 ```json
 {
-  "ea": "EA.HF.v4",
+  "ea": "EA.HF.v1.4",
   "sym": "EURUSD",
   "tf": "1",
   "bar": 12345,
@@ -238,10 +260,18 @@ Enable **Enable Telemetry (Data Window)** in the Telemetry group.
 In v1.4, telemetry plots use `display=display.none` when the Telemetry toggle is OFF. This fully removes them from the Style tab. When ON, they appear only in the Data Window.
 
 **Q: What are the pips/ticks in the dashboard footer?**
-The new row shows the distance from the current bar's close to each TP and SL level, measured in **ticks** (`syminfo.mintick` units). This is display-only and does not affect the TP/SL calculation.
+The row shows the distance from the current bar's close to each TP and SL level. The unit is **symbol-aware**:
+- On **FX pairs** (forex): distances shown in **pips** (mintick × 10) with a `"p"` suffix — e.g. `+12.5p`
+- On **non-FX instruments** (indices, crypto, commodities, etc.): distances shown in **ticks** (mintick) with a `"tk"` suffix — e.g. `+125tk`
+- With **Pip Size Mode = Override**: uses your custom Pip Size Override value and always shows `"p"` suffix
 
-**Q: Can I convert ticks to pips?**
-For most FX 5-decimal pairs (e.g. EUR/USD), 1 pip = 10 ticks. Divide the `tk` value by 10 to get approximate pips.
+This is display-only and does not affect the TP/SL calculation.
+
+**Q: Can I set a custom pip size for non-standard instruments?**
+Yes. Set **Pip Size Mode** to "Override" in the TP/SL Display settings and enter your desired **Pip Size Override** value. Distances will then use that divisor and display with the `"p"` suffix.
+
+**Q: The "tk" suffix appears — why aren't pips shown for my FX pair?**
+TradingView classifies some broker feeds (e.g. CFD FX symbols) as non-forex. If `syminfo.type` does not equal `"forex"` the auto mode falls back to ticks. Use **Pip Size Mode = Override** with `0.0001` (or your broker's pip size) to force pip display.
 
 **Q: The labels are now above the lines — can I move them back to the line?**
 Set **TP/SL Label Vertical Offset (ticks)** to `1` (minimum) to place labels very close to the line.
@@ -255,7 +285,7 @@ When ON, TP/SL lines are drawn even when confidence is below the threshold, usin
 
 - Advisory only — NOT a standalone trading system.
 - Fib Window uses rolling `highest`/`lowest`, not true swing pivots.
-- Tick-based pips display may not match broker pip definitions exactly for all instruments.
+- Pip display is symbol-aware (forex auto=mintick×10); non-forex shown as ticks. Use Pip Size Override for custom instruments.
 - Gaps and low liquidity can invalidate ATR-based levels.
 
 > ⚠️ **Trading involves substantial risk of loss. This indicator is a decision-support tool, not financial advice.**
