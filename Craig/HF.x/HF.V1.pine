@@ -23,7 +23,7 @@
 //   Flat/noise series → score stays near  0    (low confidence, no TP shown)
 
 //@version=6
-indicator("HF Scalper V1", "HF.V1", overlay=true, max_lines_count=50, max_labels_count=50)
+indicator("EA.HF Scalper V1", "EA.HF.V1", overlay=true, max_lines_count=50, max_labels_count=50)
 
 // ══════════════════════════════════════════════════════════════════════
 //  INPUTS
