@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <Nullable>disable</Nullable>
+    <!-- AlgoBuild: produce .algo; disable auto-publish to cTrader install dir -->
+    <AlgoBuild>True</AlgoBuild>
+    <AlgoPublish>False</AlgoPublish>
+    <!-- Disable SDK default Compile glob; we declare items explicitly below. -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="cTrader.Automate" Version="1.0.14" />
+  </ItemGroup>
+
+  <!-- Include only the main indicator source; sub-panel classes live in HF.V1.4.Panels.cs
+       which is intentionally excluded (cTrader requires exactly one [Indicator] per assembly). -->
+  <ItemGroup>
+    <Compile Include="../HF.V1.4.cs" Link="HF.V1.4.cs" />
+  </ItemGroup>
+
+  <!-- Override the SDK-computed .algo name (which would default to "HF.x.algo")
+       so the output artifact is named HF.V1.4.algo to match the source file. -->
+  <Target Name="OverrideAlgoFileName" BeforeTargets="_ExtractMetadata;_BundleAlgo">
+    <PropertyGroup>
+      <_AlgoFileName>HF.V1.4.algo</_AlgoFileName>
+      <_AlgoFilePath>$(OutDir)$(_AlgoFileName)</_AlgoFilePath>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Copy the built .algo artifact next to the source file for version control. -->
+  <Target Name="CopyAlgoToSourceDir" AfterTargets="_BundleAlgo">
+    <Copy SourceFiles="$(OutDir)HF.V1.4.algo"
+          DestinationFolder="$(MSBuildProjectDirectory)/.."
+          OverwriteReadOnlyFiles="True" />
+    <Message Importance="High"
+             Text="Artifact: $(MSBuildProjectDirectory)/../HF.V1.4.algo" />
+  </Target>
+
+</Project>
