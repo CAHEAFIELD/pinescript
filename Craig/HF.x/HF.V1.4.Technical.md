@@ -214,5 +214,5 @@ Settings → Style tab entirely. When `true`, the plot appears only in the Data 
 | A — Bull | `close = 100 + i*0.05` | TP labels appear above lines; pips row shows positive values for TP1/2/3, negative for SL |
 | B — Bear | `close = 100 - i*0.05` | TP labels appear above lines; pips row shows negative values for TP1/2/3, positive for SL |
 | C — Flat | `close = 100 + sin(i*0.3)*0.2` | No TP lines; pips row still shows distances |
-| D — Telemetry OFF | Any | 0 Style panel entries; JSON alert still fires if enabled |
+| D — Telemetry OFF | Any | 0 Style panel entries; no JSON alerts emitted (telemetry fully disabled) |
 | E — Telemetry ON | Any | 3 Data Window entries: `t.sc_comb`, `t.conf_pct`, `t.tp_visible` |
